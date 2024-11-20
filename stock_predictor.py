@@ -3,32 +3,57 @@ import yfinance as yf
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
 from datetime import datetime, timedelta
 
 # Title of the app
 st.title("Stock Price Predictor")
 
-# List of stock tickers
-tickers = st.multiselect("Select stocks to predict:", ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN'])
+# List of initial stock tickers
+initial_tickers = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN']
+
+# Initialize the list of tickers in session state if it doesn't exist yet
+if 'tickers' not in st.session_state:
+    st.session_state.tickers = initial_tickers.copy()
+
+# Initialize the list of selected tickers in session state if it doesn't exist yet
+if 'selected_tickers' not in st.session_state:
+    st.session_state.selected_tickers = []
+
+# Multiselect dropdown to select stocks
+tickers = st.multiselect(
+    "Select stocks to predict:",
+    st.session_state.tickers,  # Available tickers (including dynamically added ones)
+    default=st.session_state.selected_tickers  # Default selected tickers
+)
 
 # Add a search bar for ticker input
 new_ticker = st.text_input("Search for a stock ticker:")
 
-# If the user enters a ticker, validate it and add to the list
+# If the user presses enter after entering a ticker
 if new_ticker:
     try:
         # Try to fetch stock data for the ticker entered
         stock_data = yf.download(new_ticker, period='1d')
         if stock_data.empty:
-            st.error(f"Ticker '{new_ticker}' is not valid or does not exist.")
+            # This will only show if ticker is not found, but it won't block adding
+            st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
         else:
-            # If valid, add the ticker to the list
-            tickers.append(new_ticker)
-            st.success(f"'{new_ticker}' has been added to your prediction list.")
-    except:
-        # Handle invalid ticker input
-        st.error(f"Ticker '{new_ticker}' could not be found.")
+            # If valid, add the ticker to the list (only if it's not already in the list)
+            if new_ticker not in st.session_state.tickers:
+                # Add the ticker to the list of available tickers
+                st.session_state.tickers.insert(0, new_ticker)  # Add to the top of the list
+                # Add the ticker to the selected tickers list as well
+                st.session_state.selected_tickers.append(new_ticker)
+                st.success(f"'{new_ticker}' has been added to your prediction list.")
+                
+                # Clear the search bar by updating the state
+                st.session_state.new_ticker = ""  # Clear the input field
+
+            else:
+                # If ticker is already added, inform the user
+                st.warning(f"'{new_ticker}' is already in your prediction list.")
+    except Exception as e:
+        st.error(f"Error: {e}")
 
 # When the user clicks the "Predict" button
 if st.button("Predict"):
