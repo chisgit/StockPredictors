@@ -12,6 +12,24 @@ st.title("Stock Price Predictor")
 # List of stock tickers
 tickers = st.multiselect("Select stocks to predict:", ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN'])
 
+# Add a search bar for ticker input
+new_ticker = st.text_input("Search for a stock ticker:")
+
+# If the user enters a ticker, validate it and add to the list
+if new_ticker:
+    try:
+        # Try to fetch stock data for the ticker entered
+        stock_data = yf.download(new_ticker, period='1d')
+        if stock_data.empty:
+            st.error(f"Ticker '{new_ticker}' is not valid or does not exist.")
+        else:
+            # If valid, add the ticker to the list
+            tickers.append(new_ticker)
+            st.success(f"'{new_ticker}' has been added to your prediction list.")
+    except:
+        # Handle invalid ticker input
+        st.error(f"Ticker '{new_ticker}' could not be found.")
+
 # When the user clicks the "Predict" button
 if st.button("Predict"):
     results = {}
