@@ -8,52 +8,65 @@ from datetime import datetime, timedelta
 # Title of the app
 st.title("Stock Price Predictor")
 
-
 # List of initial stock tickers
 initial_tickers = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN']
 
-# Initialize the list of tickers in session state if it doesn't exist yet
+# Initialize session state variables
 if 'tickers' not in st.session_state:
     st.session_state.tickers = initial_tickers.copy()
 
-# Initialize the list of selected tickers in session state if it doesn't exist yet
 if 'selected_tickers' not in st.session_state:
     st.session_state.selected_tickers = []
 
 # Multiselect dropdown to select stocks
 tickers = st.multiselect(
     "Select stocks to predict:",
-    st.session_state.tickers,  # Available tickers (including dynamically added ones)
-    default=st.session_state.selected_tickers  # Default selected tickers
+    st.session_state.tickers,
+    default=st.session_state.selected_tickers,
+    key='stock_multiselect'
 )
 
-# Add a search bar for ticker input
-new_ticker = st.text_input("Search for a stock ticker:")
+# Update selected tickers based on multiselect
+st.session_state.selected_tickers = tickers
 
-# If the user presses enter after entering a ticker
+# Search bar for new tickers
+new_ticker = st.text_input("Search for a stock ticker:", key="new_ticker_input")
+
+# Process new ticker input
 if new_ticker:
     try:
-        # Try to fetch stock data for the ticker entered
+        # Validate ticker
         stock_data = yf.download(new_ticker, period='1d')
         if stock_data.empty:
-            # This will only show if ticker is not found, but it won't block adding
             st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
         else:
-            # If valid, add the ticker to the list (only if it's not already in the list)
-            if new_ticker not in st.session_state.tickers:
-                # Add the ticker to the list of available tickers
-                st.session_state.tickers.insert(0, new_ticker)  # Add to the top of the list
-                # Add the ticker to the selected tickers list as well
-                st.session_state.selected_tickers.append(new_ticker)
-                st.success(f"'{new_ticker}' has been added to your prediction list.")
+            # Convert to uppercase
+            new_ticker_upper = new_ticker.upper()
+            
+            # Check if ticker is already in the list
+            if new_ticker_upper not in [t.upper() for t in st.session_state.tickers]:
+                # Add to tickers list
+                st.session_state.tickers.insert(0, new_ticker_upper)
                 
+                # Add to selected tickers
+                st.session_state.selected_tickers.append(new_ticker_upper)
+                
+                # Clear the input by setting it to an empty string (not in session state)
+                new_ticker = ""  # This clears the input field on the frontend
+                
+                # Force a rerun to update the interface
+                st.rerun()
             else:
-                # If ticker is already added, inform the user
-                st.warning(f"'{new_ticker}' is already in your prediction list.")
+                # Ticker already exists, just select it if not already selected
+                if new_ticker_upper not in [t.upper() for t in st.session_state.selected_tickers]:
+                    st.session_state.selected_tickers.append(new_ticker_upper)
+                    st.rerun()
+                
     except Exception as e:
         st.error(f"Error: {e}")
 
-# When the user clicks the "Predict" button
+# Rest of the code remains the same as in the previous version (prediction logic)
+# ... [keep the entire Predict button and prediction logic from the previous version]
 if st.button("Predict"):
     results = {}
     today = datetime.now().date()
@@ -90,8 +103,17 @@ if st.button("Predict"):
 
         # Fetch latest data for prediction
         latest_data = yf.download(ticker, start=(yesterday - timedelta(days=1)).strftime('%Y-%m-%d'), end=(today + timedelta(days=1)).strftime('%Y-%m-%d'))
+        
+        # If no data is available for today (market might be closed)
         if latest_data.empty:
-            st.warning(f"No data available for {ticker} on prediction dates. Skipping.")
+            # Fetch the last 7 days of data to display the most recent day available
+            latest_data = yf.download(ticker, period='7d')
+            last_day = latest_data.iloc[-1]  # Get the last available day of data
+            
+            # Display last available day's data
+            st.write(f"Last available data for {ticker}:")
+            st.write(f"Date: {last_day.name}")
+            st.write(f"Open: {last_day['Open']}, High: {last_day['High']}, Low: {last_day['Low']}, Close: {last_day['Close']}, Volume: {last_day['Volume']}")
             results[ticker] = None
             continue
 
