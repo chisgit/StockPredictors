@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 # Title of the app
 st.title("Stock Price Predictor")
 
+'''
 # List of initial stock tickers
 initial_tickers = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN']
 
@@ -117,3 +118,4 @@ if st.button("Predict"):
             st.write(f"{ticker}: ${price:.2f}")
         else:
             st.write(f"{ticker}: Data not available")
+'''
