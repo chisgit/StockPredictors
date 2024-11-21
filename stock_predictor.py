@@ -46,9 +46,6 @@ if new_ticker:
                 st.session_state.selected_tickers.append(new_ticker)
                 st.success(f"'{new_ticker}' has been added to your prediction list.")
                 
-                # Clear the search bar by updating the state
-                st.session_state.new_ticker = ""  # Clear the input field
-
             else:
                 # If ticker is already added, inform the user
                 st.warning(f"'{new_ticker}' is already in your prediction list.")
@@ -66,12 +63,22 @@ if st.button("Predict"):
 
         # Fetch stock data
         stock_data = yf.download(ticker, start='2010-01-01', end=today.strftime('%Y-%m-%d'))
+        if stock_data.empty:
+            st.warning(f"No historical data found for {ticker}. Skipping prediction.")
+            results[ticker] = None
+            continue
+
         stock_data['Prev Close'] = stock_data['Close'].shift(1)
         stock_data.dropna(inplace=True)
-        
+
         # Features and target
-        X = stock_data[['Prev Close', 'Open', 'High', 'Low', 'Volume']]
-        y = stock_data['Close']
+        try:
+            X = stock_data[['Prev Close', 'Open', 'High', 'Low', 'Volume']]
+            y = stock_data['Close']
+        except KeyError as e:
+            st.warning(f"Missing required columns for {ticker}. Skipping.")
+            results[ticker] = None
+            continue
 
         # Train-test split
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
@@ -81,9 +88,13 @@ if st.button("Predict"):
         model.fit(X_train, y_train)
 
         # Fetch latest data for prediction
-        latest_data = yf.download(ticker, start=yesterday.strftime('%Y-%m-%d'), end=(today + timedelta(days=1)).strftime('%Y-%m-%d'))
+        latest_data = yf.download(ticker, start=(yesterday - timedelta(days=1)).strftime('%Y-%m-%d'), end=(today + timedelta(days=1)).strftime('%Y-%m-%d'))
+        if latest_data.empty:
+            st.warning(f"No data available for {ticker} on prediction dates. Skipping.")
+            results[ticker] = None
+            continue
 
-        if yesterday.strftime('%Y-%m-%d') in latest_data.index and today.strftime('%Y-%m-%d') in latest_data.index:
+        try:
             prev_close = latest_data.loc[yesterday.strftime('%Y-%m-%d'), 'Close']
             today_features = latest_data.loc[today.strftime('%Y-%m-%d'), ['Open', 'High', 'Low', 'Volume']]
             input_features = pd.DataFrame([{
@@ -95,7 +106,8 @@ if st.button("Predict"):
             }])
             prediction = model.predict(input_features)
             results[ticker] = prediction.item()
-        else:
+        except Exception as e:
+            st.error(f"Error processing {ticker}: {e}")
             results[ticker] = None
 
     # Display results
