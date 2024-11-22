@@ -68,9 +68,10 @@ if new_ticker:
 if st.button("Predict"):
     results = {}
     output_lines = []  # Initialize output_lines list here
-    today = today = datetime.now()
+    today = datetime.now() - timedelta(days=2)
     yesterday = today - timedelta(days=1)
-    isIntraday = False
+    isMarketOpen = False
+    todays_ticker_df = pd.Series(dtype='object')
 
     for ticker in tickers:
         st.markdown(f"Processing {ticker}...")
@@ -85,38 +86,52 @@ if st.button("Predict"):
         # Define NYSE market hours
         market_open = time(9, 30)
         market_close = time(16, 0)
-        now = datetime.now().time()
+        #Tests for different times
+        #now = datetime.now().time()
+        now = time(hour=14, minute=30, second=0)
 
         if market_open <= now <= market_close:
             print("Market is open. Close value may not be final.")
-            isIntraday = True
+            isMarketOpen = True
         else:
             print("Market is closed. Close value should be final.")
-            isIntraday = False
+            isMarketOpen = False
 
         # Check if data for today is available
-        #data_today = [latest_data[latest_data.index.date == today] & latest_data[latest_data.index.open == ""]
-        today_features = latest_data.loc[today.strftime('%Y-%m-%d'), ['Open', 'High', 'Low', 'Volume', 'Close']]
+        try:
+            today_features = latest_data.loc[today.strftime('%Y-%m-%d'), ['Prev Close', 'Open', 'High', 'Low', 'Volume']]
+            
+            #Check to see if there's any data that matches today's info if so
+            #we have data for today, and run the model and data_today won't be empty
+            todays_ticker_df = latest_data[latest_data.index.date == today.date()]
 
-        data_today = latest_data[latest_data.index.date == today.date()]
-        print (f"latest_data.index.date")
-        print (latest_data.index.date)
-        print (f"data_today see below")
-        print(data_today)      
-       
-           
-        print (f"today.date' {today.date()}")
-        print("\n")
-   
-        if data_today.empty and isIntraday is False:
+            print (f"latest_data.index.date")
+            print (latest_data.index.date)
+            print (f"data_today see below")
+            print(todays_ticker_df)      
+            print (f"today.date' {today.date()}")
+            print("\n")    
+
+        except Exception:
+            todays_ticker_df = pd.Series(dtype='object')
+
+        #Check to see if there is any current data if we don't have the core features we can't train the model
+        #If there isn't any data, and it's outside of trading hours, we can't predict the next day's close
+        #So pull the latest data we can (5 days to cover anomolies weekends, and holidays)
+        #Should not be empty if it is Intraday, and if it not Intraday (for exmaple in the morning, it will be empty)
+        if todays_ticker_df.empty: #and isIntraday is False -- not sure intraday matters
+        
             print(f"data_today.empty and isIntraday is False")
             # If data for today is missing, show the last available day's data (if any)
             latest_data = yf.download(ticker, period='5d')  # Fetch the latest available data
+
+            #Get the last row in the dataframe series, which represents the nearest day to today
             last_day = latest_data.iloc[-1] if not latest_data.empty else None
-            
+            today_features = last_day
             print(latest_data.head())
             print(f"today's features {today_features}")
-          
+            
+            #Here we just go and print out the stats for the last avaiable day
             if last_day is not None:
                 try:
                     print("Last day where last_day = latest_data.iloc[-1] ):")
@@ -138,15 +153,20 @@ if st.button("Predict"):
                         f"Close: {close_price}, "
                         f"Volume: {volume}"
                     )
-                    st.markdown(f"Getting here The Market is not open right now.  \n{output_line}")
-
+                   
+                    
+                    output_lines.append(f"CP1: The Market is not open right now. But here is the data for:")
+                    output_lines.append(last_day.name.strftime('%Y-%m-%d'))
+                    output_lines.append(output_line)
                 except Exception:
                     output_line = f"{ticker}: Data not available"
                     output_lines.append(output_line)
 
+                print(f"last_day date: {last_day.name.strftime('%Y-%m-%d')}")
+
                 # Join and print each line followed by a newline character
                 st.text("\n".join(output_lines))
-
+                output_lines.clear()
                 results[ticker] = None  # Skip prediction for this ticker
 
                 continue
@@ -195,8 +215,8 @@ if st.button("Predict"):
 
             latest_data_for_prediction = yf.download(ticker, period='5d')
             # Prepare prediction features
-            latest_data = yf.download(ticker, period='5d')  # Fetch last 5 days' data
-            latest_data['Prev Close'] = latest_data['Close'].shift(1)
+            latest_data = latest_data_for_prediction  # Take the last 5 days' data
+            latest_data['Prev Close'] = latest_data['Close'].shift(1) #get rid of the close data because that is what we want to predict
 
             # Use the most recent day with complete data for prediction
             latest_data.dropna(inplace=True)
@@ -218,13 +238,14 @@ if st.button("Predict"):
             else:
                 st.warning(f"No recent data available for {ticker}. Skipping prediction.")
                 results[ticker] = None
-           
-            if not latest_data_for_prediction.empty and not isIntraday:
+            """
+            # If there is data, 
+            if not latest_data_for_prediction.empty and isIntraday is False:
                 # Use the most recent data available for prediction
-                latest_data_for_prediction = yf.download(ticker, period='5d')
                 last_day = latest_data_for_prediction.iloc[-1]
 
                 #st.write(f"Open: {last_day['Open']}, High: {last_day['High']}, Low: {last_day['Low']}, Close: {last_day['Close']}, Volume: {last_day['Volume']}")
+                
                 # Extract the numerical values from the last day's data
                 # Formatting values for display
                 open_price = f"{last_day['Open'].iloc[0]:.3f}"
@@ -245,6 +266,7 @@ if st.button("Predict"):
                 
                 results[ticker] = None
                 continue
+            """
 
             latest_data_for_prediction.index = pd.to_datetime(latest_data_for_prediction.index)
             print(f"what does lated prediction look like")
@@ -272,17 +294,17 @@ if st.button("Predict"):
 
             try:    
                      
-                    prev_close = latest_data_for_prediction.loc[yesterday, 'Close']
-                    today_features = latest_data_for_prediction.loc[today, ['Open', 'High', 'Low', 'Volume']]
-                    input_features = pd.DataFrame([{
-                        'Prev Close': prev_close['Close'],
-                        'Open': today_features['Open'],
-                        'High': today_features['High'],
-                        'Low': today_features['Low'],
-                        'Volume': today_features['Volume']
+                #prev_close = latest_data_for_prediction.loc[yesterday, 'Close']
+                today_features = latest_data_for_prediction.loc[today, ['Prev Close', 'Open', 'High', 'Low', 'Volume']]
+                input_features = pd.DataFrame([{
+                    'Prev Close': today_features['Prev Close'],
+                    'Open': today_features['Open'],
+                    'High': today_features['High'],
+                    'Low': today_features['Low'],
+                    'Volume': today_features['Volume']
                     }])
-                    prediction = model.predict(input_features)
-                    results[ticker] = prediction.item()
+                prediction = model.predict(input_features)
+                results[ticker] = prediction.item()
             except Exception as e:
                     st.error(f"Error processing {ticker}: {e}")
                     results[ticker] = None
