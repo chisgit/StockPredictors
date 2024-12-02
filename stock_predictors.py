@@ -5,14 +5,12 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from datetime import datetime, timedelta, time
+import pytz  # Add this import for timezone handling
 
 # Define NYSE market hours (Global constants)
 MARKET_OPEN = time(9, 30)
 MARKET_CLOSE = time(16, 0)
-# Define NOW as full datetime
-# NOW = datetime.now()  # Adjust for your testing time offset
-# NOW_DATE = NOW.date()
-# NOW_TIME = NOW.time()
+NYSE_TIMEZONE = pytz.timezone('America/New_York')
 
       
 def update_selected_tickers(change):
@@ -27,29 +25,20 @@ def update_selected_tickers(change):
     print(f"[AFTER MULTISELECT] Multiselect value: {st.session_state.selected_tickers}")
 
 def market_status():
-    # """
-    # Determines the current market status:
-    # 1. Before market opens
-    # 2. During market hours
-    # 3. After market closes
-    # """
-
-    # Get the current time in Eastern Time (or your server's time zone)
-    #now = datetime.now().time()  # Current system time
-    #testing times for
-    # moved to global constant for testing now = (datetime.now() - timedelta(hours=1)).time()
+    # Get current time in Eastern Time
+    current_time = datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE).time()
     
     # 1. Check if it is between 12:00 AM and market open (before 9:30 AM)
-    if datetime.now().time() < MARKET_OPEN:
+    if current_time < MARKET_OPEN:
         return "BEFORE_MARKET_OPEN"  # Market has not opened yet (Midnight to 9:30 AM)
     
     # 2. Check if it is during market hours (between 9:30 AM and 4:00 PM)
-    elif MARKET_OPEN <= datetime.now().time() <= MARKET_CLOSE:
+    elif MARKET_OPEN <= current_time <= MARKET_CLOSE:
         return "MARKET_OPEN"  # Market is open (9:30 AM to 4:00 PM)
     
     # 3. Check if it is after market close but before 11:59 PM (4:00 PM to 11:59 PM)
     else:
-        return "AFTER_MARKET_CLOSE"  # Market has closed, but it's still before midnight (4:00 PM to 11:59 PM)
+        return "AFTER_MARKET_CLOSE"  # Market has closed for the day
     
     #Check to see if we are before today's market open
         #This means today's date has no data
