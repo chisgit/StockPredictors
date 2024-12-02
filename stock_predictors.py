@@ -10,9 +10,9 @@ from datetime import datetime, timedelta, time
 MARKET_OPEN = time(9, 30)
 MARKET_CLOSE = time(16, 0)
 # Define NOW as full datetime
-NOW = datetime.now()  # Adjust for your testing time offset
-NOW_DATE = NOW.date()
-NOW_TIME = NOW.time()
+# NOW = datetime.now()  # Adjust for your testing time offset
+# NOW_DATE = NOW.date()
+# NOW_TIME = NOW.time()
 
       
 def update_selected_tickers(change):
@@ -40,11 +40,11 @@ def market_status():
     # moved to global constant for testing now = (datetime.now() - timedelta(hours=1)).time()
     
     # 1. Check if it is between 12:00 AM and market open (before 9:30 AM)
-    if NOW_TIME < MARKET_OPEN:
+    if datetime.now().time() < MARKET_OPEN:
         return "BEFORE_MARKET_OPEN"  # Market has not opened yet (Midnight to 9:30 AM)
     
     # 2. Check if it is during market hours (between 9:30 AM and 4:00 PM)
-    elif MARKET_OPEN <= NOW_TIME <= MARKET_CLOSE:
+    elif MARKET_OPEN <= datetime.now().time() <= MARKET_CLOSE:
         return "MARKET_OPEN"  # Market is open (9:30 AM to 4:00 PM)
     
     # 3. Check if it is after market close but before 11:59 PM (4:00 PM to 11:59 PM)
@@ -158,7 +158,7 @@ def execute_pipeline(tickers):
 
         try:
             # Get training data
-            stock_data = fetch_data(each_ticker, NOW_DATE + timedelta(days=1))
+            stock_data = fetch_data(each_ticker, datetime.now().date() + timedelta(days=1))
             train_ready_data = preprocess_data(stock_data)
             
             # Train model
