@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, time
 MARKET_OPEN = time(9, 30)
 MARKET_CLOSE = time(16, 0)
 # Define NOW as full datetime
-NOW = datetime.now() - timedelta(hours=0)  # Adjust for your testing time offset
+NOW = datetime.now()  # Adjust for your testing time offset
 NOW_DATE = NOW.date()
 NOW_TIME = NOW.time()
 
@@ -133,58 +133,6 @@ def train_model(train_ready_data, model_type):
     model.fit(X, y)
     return model
 
-def get_features_based_on_market_status(train_ready_data):
-    # """
-    # Returns the features (X) and date for model prediction based on market status and latest data.
-
-    # :param train_ready_data: The data to use for feature selection
-    # :return: The feature set (X) and corresponding date
-    # """
-    
-    # Extract the date component
-    #the_date = datetime.strptime(latest_data.name.date())
-    #try this: data_date = datetime.strptime(str(latest_data.name), "%Y-%m-%d %H:%M:%S").date()
-
-    the_date = (latest_data.name.date())
-                                  
-    print(f"Um the data date is {the_date}")
-    #CODE GETS HERE
-
-    # Determine market status
-    status = market_status()
-
-    #For now we test with status market open
-    #status = "MARKET_OPEN"
-    print(f"TEST assigned status to {status}")
-
-    prediction_data = latest_data[['Open', 'High', 'Low', 'Volume', 'Prev Close']]  # Ensure these columns are in the correct order
-        # Ensure the prediction data is returned as a DataFrame
-    input_features = pd.DataFrame([prediction_data])
-    print(f"There are the input features {input_features}")
-    
-    # Select features based on market status
-    if status == "MARKET_OPEN":
-        print(f"I came into getfeatures and I'm in {status}")
-
-        # prediction_data = latest_data[['Open', 'High', 'Low', 'Volume', 'Prev Close']]  # Ensure these columns are in the correct order
-        # # Ensure the prediction data is returned as a DataFrame
-        # input_features = pd.DataFrame([prediction_data])
-        # print(f"There are the input features {input_features}")
-
-    elif status == "BEFORE_MARKET_OPEN":
-        print(f"It is before Market Open for today.  We will use the previous day's closing values to predict today's closing price")
-
-        #features = latest_data[['Prev Close']]
-
-    elif status == "AFTER_MARKET_CLOSE":
-        #features = latest_data[['Open', 'High', 'Low', 'Volume','Prev Close']]
-        print(f"I'm in After Market Close")
-
-    else:
-        raise ValueError("Unknown market status")
-
-    return input_features # Return features as DataFrame and date as scalar
-
 def fetch_features(ticker):
     stock_data = yf.download(ticker, period='5d') #taking 5 days of data can only be 1 or 5- ensuring intra day non-close record doesn't get dropped
     #latest_data = 
@@ -243,7 +191,7 @@ def display_market_status(last_available_date=None):
     status = market_status()
     
     # Format and display current date
-    date_str = NOW.strftime('%A, %B %d, %Y')
+    date_str = datetime.now().strftime('%A, %B %d, %Y')
     st.markdown(f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>", unsafe_allow_html=True)
 
     last_date_str = last_available_date.strftime('%A, %B %d')
@@ -254,7 +202,7 @@ def display_market_status(last_available_date=None):
             <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing prices are for {last_date_str} based on the latest available data</div>
         </div>""", unsafe_allow_html=True)
     elif status == "MARKET_OPEN":
-        time_str = NOW.strftime('%I:%M %p')  # Only format time when needed
+        time_str = datetime.now().strftime('%I:%M %p')  # Only format time when needed
         st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
             <h3 style='margin-bottom: 0;'>🔔 Market is Open</h3>
             <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str} based on current time: {time_str}</div>
