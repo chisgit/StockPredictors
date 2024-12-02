@@ -4,17 +4,18 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time as dt_time
 import pytz  # Add this import for timezone handling
+import time as time_module  # Rename time module import
 
 # Define NYSE market hours (Global constants)
-MARKET_OPEN = time(9, 30)
-MARKET_CLOSE = time(16, 0)
+MARKET_OPEN = dt_time(9, 30)
+MARKET_CLOSE = dt_time(16, 0)
 NYSE_TIMEZONE = pytz.timezone('America/New_York')
 
 def get_nyse_datetime():
     """Get current datetime in NYSE timezone"""
-    return datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE)
+    return datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE) #- timedelta(hours=5) for testing
 
 def get_nyse_date():
     """Get current date in NYSE timezone"""
@@ -322,6 +323,10 @@ if 'prev_selected_tickers' not in st.session_state:
 if 'new_ticker' not in st.session_state:
     st.session_state.new_ticker = ''
 
+# Initialize session state for results
+if 'results_key' not in st.session_state:
+    st.session_state.results_key = 0
+
 tickers = st.multiselect(
     "Select stocks to predict:",
     st.session_state.tickers,
@@ -356,11 +361,30 @@ if new_ticker:
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Predict button logic
-if st.button("Predict"):
-    # Directly assign selected tickers from session state to tickers
-    tickers = st.session_state.selected_tickers
-    print(f"Tickers {tickers}")
+# Predict button and results area
+predict_button = st.button("Predict")
+
+# Create containers for processing messages and results
+processing_container = st.container(key=f"processing_{st.session_state.results_key}")
+results_container = st.container(key=f"results_{st.session_state.results_key}")
+
+if predict_button:
+    # Increment the key to force new containers on next render
+    st.session_state.results_key += 1
     
-    close_price_prediction = execute_pipeline(tickers)
-    display_results(close_price_prediction)
+    # Clear both containers
+    processing_container.empty()
+    results_container.empty()
+    time_module.sleep(2)  # Wait for 2 seconds
+    
+    # Execute predictions
+    tickers = st.session_state.selected_tickers
+    
+    # Show processing messages in processing container
+    with processing_container:
+        print(f"Tickers {tickers}")
+        close_price_prediction = execute_pipeline(tickers)
+    
+    # Display results table in results container
+    with results_container:
+        display_results(close_price_prediction)
