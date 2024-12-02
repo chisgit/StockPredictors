@@ -258,7 +258,7 @@ def display_results(results):
 
             # Display ticker with predicted close and difference
             st.markdown(
-                f'<div style="margin-bottom: 5px; font-size: 1.1em; color: #000; font-weight: bold;">'
+                f'<div style="margin-bottom: 5px; font-size: 1.1em; font-weight: bold;">'
                 f'{ticker} - Predicted Close: <span style="font-size: 1.15em;">${prediction:.2f}</span>{diff_str}'
                 f'</div>',
                 unsafe_allow_html=True
@@ -277,15 +277,15 @@ def display_results(results):
             metrics = ['Open', 'High', 'Low', 'Prev Close', current_label, 'Volume']
             values = [open_val, high_val, low_val, prev_close_val, current_val, volume_val]
             
-            # Create HTML table with refined styling
+            # Create HTML table with refined styling and theme-appropriate colors
             html = f"""
             <div style="margin: 10px 0;">
                 <table style="width: 100%; text-align: center; border-collapse: collapse;">
                     <tr>
-                        {''.join(f'<td style="width: 16.66%; padding: 2px;"><small style="color: #666;">{metric}</small></td>' for metric in metrics)}
+                        {''.join(f'<td style="width: 16.66%; padding: 2px;"><small style="opacity: 0.6;">{metric}</small></td>' for metric in metrics)}
                     </tr>
                     <tr>
-                        {''.join(f'<td style="width: 16.66%; padding: 2px;"><span style="font-size: 1.1em; color: #999;">{value}</span></td>' for value in values)}
+                        {''.join(f'<td style="width: 16.66%; padding: 2px;"><span style="font-size: 1.1em; opacity: 0.8;">{value}</span></td>' for value in values)}
                     </tr>
                 </table>
             </div>
