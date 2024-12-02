@@ -12,7 +12,18 @@ MARKET_OPEN = time(9, 30)
 MARKET_CLOSE = time(16, 0)
 NYSE_TIMEZONE = pytz.timezone('America/New_York')
 
-      
+def get_nyse_datetime():
+    """Get current datetime in NYSE timezone"""
+    return datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE)
+
+def get_nyse_date():
+    """Get current date in NYSE timezone"""
+    return get_nyse_datetime().date()
+
+def get_nyse_time():
+    """Get current time in NYSE timezone"""
+    return get_nyse_datetime().time()
+
 def update_selected_tickers(change):
     print(f"[UPDATE] Change: {change}")  # This is the key "stock_multiselect"
     print(f"[UPDATE] Change Type: {type(change)}") # This will print <class 'str'>
@@ -25,39 +36,26 @@ def update_selected_tickers(change):
     print(f"[AFTER MULTISELECT] Multiselect value: {st.session_state.selected_tickers}")
 
 def market_status():
-    # Get current time in Eastern Time
-    current_time = datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE).time()
+    """Check the current market status based on NYSE time"""
+    current_time = get_nyse_time()
     
-    # 1. Check if it is between 12:00 AM and market open (before 9:30 AM)
     if current_time < MARKET_OPEN:
-        return "BEFORE_MARKET_OPEN"  # Market has not opened yet (Midnight to 9:30 AM)
-    
-    # 2. Check if it is during market hours (between 9:30 AM and 4:00 PM)
+        return "BEFORE_MARKET_OPEN"
     elif MARKET_OPEN <= current_time <= MARKET_CLOSE:
-        return "MARKET_OPEN"  # Market is open (9:30 AM to 4:00 PM)
-    
-    # 3. Check if it is after market close but before 11:59 PM (4:00 PM to 11:59 PM)
+        return "MARKET_OPEN"
     else:
-        return "AFTER_MARKET_CLOSE"  # Market has closed for the day
-    
-    #Check to see if we are before today's market open
-        #This means today's date has no data
-        #If the market hasn't opened, we can predict today's close based on yesterdays closing values
-    
-    #Check to see if the market is open today
-        #IF YES CONTINUE to predict today's close
-
-    #Check to see if the market is after close today
-        #IF it is after close this means two things
-            # I should have the current day's data
-            # In which case I can show today's prediction and today's closing prices
+        return "AFTER_MARKET_CLOSE"
 
 def fetch_data(ticker, end_date, start_date='2010-01-01'):
-    if end_date is None:
-        end_date = datetime.now().date()
-    stock_data = yf.download(ticker, start=start_date, end=end_date)
-
-    return stock_data
+    """
+    Fetch historical data for a given ticker
+    """
+    # Get current date in NYSE timezone
+    end_date = get_nyse_date()
+    
+    # Download data
+    df = yf.download(ticker, start=start_date, end=end_date)
+    return df
 
 def preprocess_data(stock_data):
     # """
@@ -123,19 +121,24 @@ def train_model(train_ready_data, model_type):
     return model
 
 def fetch_features(ticker):
-    stock_data = yf.download(ticker, period='5d') #taking 5 days of data can only be 1 or 5- ensuring intra day non-close record doesn't get dropped
-    #latest_data = 
+    """
+    Fetch recent stock data for prediction features.
+    """
+    # Get current time in NYSE timezone
+    current_time = get_nyse_datetime()
+    
+    # Download data using period to ensure we get the right trading days
+    stock_data = yf.download(ticker, period='5d')
     print(f"Fetch Features stock_data")
     print(stock_data)
-    prediction_data = preprocess_data(stock_data).tail(1) #ensures that we get previous close and the last row in the df
-    prediction_features = prediction_data[['Open', 'High', 'Low', 'Volume', 'Prev Close']] #Select the features in the right order from the df
+    
+    prediction_data = preprocess_data(stock_data).tail(1)
+    prediction_features = prediction_data[['Open', 'High', 'Low', 'Volume', 'Prev Close']]
     
     print(f"Fetch DF to get Features prediction_data")
     print(prediction_features)
 
     return prediction_features
-
-
 
 def execute_pipeline(tickers):
     results = []
@@ -146,8 +149,9 @@ def execute_pipeline(tickers):
         st.markdown(f"Processing {each_ticker}...")
 
         try:
-            # Get training data
-            stock_data = fetch_data(each_ticker, datetime.now().date() + timedelta(days=1))
+            # Get training data using NYSE timezone
+            nyse_date = get_nyse_date()
+            stock_data = fetch_data(each_ticker, nyse_date + timedelta(days=1))
             train_ready_data = preprocess_data(stock_data)
             
             # Train model
@@ -178,7 +182,7 @@ def display_market_status(last_available_date=None):
         last_available_date: Last available trading date (for BEFORE_MARKET_OPEN state)
     """
     # Get current time in Eastern Time
-    current_time = datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE)
+    current_time = get_nyse_datetime()
     status = market_status()
     
     # Format and display current date
