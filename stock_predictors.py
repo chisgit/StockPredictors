@@ -251,18 +251,18 @@ def display_market_status(last_available_date=None):
     if status == "BEFORE_MARKET_OPEN":
         st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
             <h3 style='margin-bottom: 0;'>⏳ Market hasn't opened yet</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Displaying predicted closing prices are for {last_date_str} based on the latest available data</div>
+            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing prices are for {last_date_str} based on the latest available data</div>
         </div>""", unsafe_allow_html=True)
     elif status == "MARKET_OPEN":
         time_str = NOW.strftime('%I:%M %p')  # Only format time when needed
         st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
             <h3 style='margin-bottom: 0;'>🔔 Market is Open</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Displaying predicted closing price for {last_date_str} based on current time: {time_str}</div>
+            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str} based on current time: {time_str}</div>
         </div>""", unsafe_allow_html=True)
     else:  # AFTER_MARKET_CLOSE
         st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
             <h3 style='margin-bottom: 0;'>🔴 Market is Closed</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Displaying predicted closing price for {last_date_str}. Today's closing prices are final.</div>
+            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str}. Today's closing prices are final.</div>
         </div>""", unsafe_allow_html=True)
     
     st.markdown("---")  # Add a separator line
