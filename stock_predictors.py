@@ -177,13 +177,16 @@ def display_market_status(last_available_date=None):
     Args:
         last_available_date: Last available trading date (for BEFORE_MARKET_OPEN state)
     """
+    # Get current time in Eastern Time
+    current_time = datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE)
     status = market_status()
     
     # Format and display current date
-    date_str = datetime.now().strftime('%A, %B %d, %Y')
+    date_str = current_time.strftime('%A, %B %d, %Y')
     st.markdown(f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>", unsafe_allow_html=True)
 
     last_date_str = last_available_date.strftime('%A, %B %d')
+    time_str = current_time.strftime('%I:%M %p EST')  # Add EST to the time
 
     if status == "BEFORE_MARKET_OPEN":
         st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
@@ -191,7 +194,6 @@ def display_market_status(last_available_date=None):
             <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing prices are for {last_date_str} based on the latest available data</div>
         </div>""", unsafe_allow_html=True)
     elif status == "MARKET_OPEN":
-        time_str = datetime.now().strftime('%I:%M %p')  # Only format time when needed
         st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
             <h3 style='margin-bottom: 0;'>🔔 Market is Open</h3>
             <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str} based on current time: {time_str}</div>
