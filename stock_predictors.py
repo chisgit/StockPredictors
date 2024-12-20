@@ -5,103 +5,25 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from datetime import datetime, timedelta, time as dt_time
-import pytz  # Add this import for timezone handling
-import time as time_module  # Rename time module import
-
-# Define NYSE market hours (Global constants)
-MARKET_OPEN = dt_time(9, 30)
-MARKET_CLOSE = dt_time(16, 0)
-NYSE_TIMEZONE = pytz.timezone('America/New_York')
-
-def get_nyse_datetime():
-    """Get current datetime in NYSE timezone"""
-    return datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE) #- timedelta(hours=5) for testing
-
-def get_nyse_date():
-    """Get current date in NYSE timezone"""
-    return get_nyse_datetime().date()
-
-def get_nyse_time():
-    """Get current time in NYSE timezone"""
-    return get_nyse_datetime().time()
+import pytz  
+import time as time_module  
+from app import display_market_status
+from utils import get_nyse_datetime, get_nyse_date, get_nyse_time, market_status
+from data_handler import fetch_data, fetch_features
+from data_processor import preprocess_data
 
 def update_selected_tickers(change):
     print(f"[UPDATE] Change: {change}")  # This is the key "stock_multiselect"
-    print(f"[UPDATE] Change Type: {type(change)}") # This will print <class 'str'>
-
-    # Access the updated multiselect value directly
+    
+    # Get the current multiselect state
     updated_sel_tickers = st.session_state.stock_multiselect
-    print(f"[UPDATE] Updated selected_tickers: {updated_sel_tickers}") 
-
+    
+    # Update selected_tickers to match the multiselect state
     st.session_state.selected_tickers = updated_sel_tickers
+    
     print(f"[AFTER MULTISELECT] Multiselect value: {st.session_state.selected_tickers}")
 
-def market_status():
-    """Check the current market status based on NYSE time"""
-    current_time = get_nyse_time()
-    
-    if current_time < MARKET_OPEN:
-        return "BEFORE_MARKET_OPEN"
-    elif MARKET_OPEN <= current_time <= MARKET_CLOSE:
-        return "MARKET_OPEN"
-    else:
-        return "AFTER_MARKET_CLOSE"
-
-def fetch_data(ticker, end_date, start_date='2010-01-01'):
-    """
-    Fetch historical data for a given ticker
-    """
-    # Get current date in NYSE timezone
-    end_date = get_nyse_date()
-    
-    # Download data
-    df = yf.download(ticker, start=start_date, end=end_date)
-    return df
-
-def preprocess_data(stock_data):
-    # """
-    # Preprocesses stock data by adding the 'Prev Close' column and dropping rows with missing data.
-    
-    # Args:
-    #     stock_data (pd.DataFrame): DataFrame containing stock data with at least a 'Close' column.
-        
-    # Returns:
-    #     pd.DataFrame: Processed DataFrame with 'Prev Close' added and rows with missing data dropped.
-    # """
-
-    # Check if data is empty
-    if stock_data.empty:
-        st.warning("No data returned for the ticker. Skipping.")
-        return stock_data
-    
-    # print(f"Stock Data in preprocess after fetch")
-    # print(stock_data.head(5))
-    # print(f"Stock Data Index")
-    # print(stock_data.index)
-    # print(f"Stock Data Columns")
-    # print(stock_data.columns)
-    
-    
-    ticker_value = stock_data.columns[1][1] #Get the ticker value from the dataframe
-
-    # Add 'Prev Close' column by shifting 'Close' by 1 to the next row but ensuring to preserve the ticker value
-    stock_data[('Prev Close', ticker_value)] = stock_data[('Close', ticker_value)].shift(1)
-    stock_data.dropna(inplace=True) #removes the first record in the data set (since there is no close for the previous row)
-
-    return stock_data
-
 def train_model(train_ready_data, model_type):
-    # """
-    # Trains the model on the provided data.
-
-    # Args:
-    # - train_ready_data (pd.DataFrame): The preprocessed stock data.
-    # - model_type (str): The type of model to train ("linear_regression", "decision_tree", "random_forest").
-
-    # Returns:
-    # - model: The trained model.
-    # """
-
     # Features and target
     try:
         X = train_ready_data[['Open', 'High', 'Low', 'Volume', 'Prev Close']]
@@ -112,34 +34,10 @@ def train_model(train_ready_data, model_type):
 
     if model_type == "linear_regression":
         model = LinearRegression()
-    # elif model_type == "decision_tree":
-    #     model = DecisionTreeRegressor()
-    # elif model_type == "random_forest":
-    #     model = RandomForestRegressor()
     else:
         raise ValueError("Unknown model type")
     model.fit(X, y)
     return model
-
-def fetch_features(ticker):
-    """
-    Fetch recent stock data for prediction features.
-    """
-    # Get current time in NYSE timezone
-    current_time = get_nyse_datetime()
-    
-    # Download data using period to ensure we get the right trading days
-    stock_data = yf.download(ticker, period='5d')
-    print(f"Fetch Features stock_data")
-    print(stock_data)
-    
-    prediction_data = preprocess_data(stock_data).tail(1)
-    prediction_features = prediction_data[['Open', 'High', 'Low', 'Volume', 'Prev Close']]
-    
-    print(f"Fetch DF to get Features prediction_data")
-    print(prediction_features)
-
-    return prediction_features
 
 def execute_pipeline(tickers):
     results = []
@@ -175,41 +73,6 @@ def execute_pipeline(tickers):
             continue
 
     return results
-
-def display_market_status(last_available_date=None):
-    """
-    Display market status with icon and description.
-    Args:
-        last_available_date: Last available trading date (for BEFORE_MARKET_OPEN state)
-    """
-    # Get current time in Eastern Time
-    current_time = get_nyse_datetime()
-    status = market_status()
-    
-    # Format and display current date
-    date_str = current_time.strftime('%A, %B %d, %Y')
-    st.markdown(f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>", unsafe_allow_html=True)
-
-    last_date_str = last_available_date.strftime('%A, %B %d')
-    time_str = current_time.strftime('%I:%M %p EST')  # Add EST to the time
-
-    if status == "BEFORE_MARKET_OPEN":
-        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
-            <h3 style='margin-bottom: 0;'>⏳ Market hasn't opened yet</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing prices are for {last_date_str} based on the latest available data</div>
-        </div>""", unsafe_allow_html=True)
-    elif status == "MARKET_OPEN":
-        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
-            <h3 style='margin-bottom: 0;'>🔔 Market is Open</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str} based on current time: {time_str}</div>
-        </div>""", unsafe_allow_html=True)
-    else:  # AFTER_MARKET_CLOSE
-        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
-            <h3 style='margin-bottom: 0;'>🔴 Market is Closed</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str}. Today's closing prices are final.</div>
-        </div>""", unsafe_allow_html=True)
-    
-    st.markdown("---")  # Add a separator line
 
 def display_results(results):
     """
@@ -301,7 +164,6 @@ def display_results(results):
             st.error(f"Error displaying data for {ticker}: {str(e)}")
             continue
 
-
 # Title of the app
 st.title("Stock Price Predictor")
 
@@ -340,7 +202,10 @@ tickers = st.multiselect(
 st.session_state.selected_tickers = tickers
 
 # Search bar for new tickers
-new_ticker = st.text_input("Search for a stock ticker:", key="new_ticker_input")
+new_ticker = st.text_input("Search for a stock ticker:", value=st.session_state.new_ticker, key="new_ticker_input")
+
+if new_ticker != st.session_state.new_ticker:
+    st.session_state.new_ticker = new_ticker
 
 if new_ticker:
     try:
@@ -352,7 +217,6 @@ if new_ticker:
             if new_ticker_upper not in [t.upper() for t in st.session_state.tickers]:
                 st.session_state.tickers.insert(0, new_ticker_upper)
                 st.session_state.selected_tickers.append(new_ticker_upper)
-                new_ticker = ""
                 st.rerun()
             else:
                 if new_ticker_upper not in [t.upper() for t in st.session_state.selected_tickers]:
@@ -360,6 +224,8 @@ if new_ticker:
                     st.rerun()
     except Exception as e:
         st.error(f"Error: {e}")
+st.session_state.new_ticker = ''
+    
 
 # Predict button and results area
 predict_button = st.button("Predict")

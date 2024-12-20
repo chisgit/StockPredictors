@@ -1,48 +1,37 @@
-# app.py
-# Import necessary modules
 import streamlit as st
-import streamlit as st
-from gen_utils import get_todays_date, message_handler
+from utils import get_nyse_datetime, market_status
 
-# Function to initialize session state or other global setup
-def initialize_session():
-    initial_tickers = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN']
-    if 'tickers' not in st.session_state:
-        st.session_state.tickers = initial_tickers.copy()
+def display_market_status(last_available_date=None):
+    """
+    Display market status with icon and description.
+    Args:
+        last_available_date: Last available trading date (for BEFORE_MARKET_OPEN state)
+    """
+    # Get current time in Eastern Time
+    current_time = get_nyse_datetime()
+    status = market_status()
+    
+    # Format and display current date
+    date_str = current_time.strftime('%A, %B %d, %Y')
+    st.markdown(f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>", unsafe_allow_html=True)
 
-    if 'selected_tickers' not in st.session_state:
-        st.session_state.selected_tickers = []
+    last_date_str = last_available_date.strftime('%A, %B %d')
+    time_str = current_time.strftime('%I:%M %p EST')  # Add EST to the time
 
-# Utility function to handle ticker selection
-def handle_ticker_selection():
-    tickers = st.multiselect(
-        "Select stocks to predict:",
-        st.session_state.tickers,
-        default=st.session_state.selected_tickers,
-        key='stock_multiselect'
-    )
-    st.session_state.selected_tickers = tickers  # Update selected tickers
-
-# Other utility functions like adding tickers or displaying messages
-def handle_search_bar():
-    new_ticker = st.text_input("Search for a stock ticker:", key="new_ticker_input")
-    if new_ticker and new_ticker not in st.session_state.tickers:
-        st.session_state.tickers.append(new_ticker)  # Add new ticker to list
-        st.success(f"Added {new_ticker} to stock list.")
-
-# Function to display today's date and other messages
-def display_date_and_message():
-    st.write(f"Today's date: {get_todays_date()}")
-    message_handler("Welcome to the stock price prediction app!")
-
-# Render the entire UI (UI layout)
-def render_ui():
-    # Display Title and UI components
-    st.title("Stock Price Predictor")
-
-    # Call functions to handle UI components
-    '''
-    display_date_and_message()  # Display the date and message
-    handle_ticker_selection()  # Handle the multiselect of tickers
-    handle_search_bar()  # Handle the search bar for new tickers
-    '''
+    if status == "BEFORE_MARKET_OPEN":
+        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
+            <h3 style='margin-bottom: 0;'>⏳ Market hasn't opened yet</h3>
+            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing prices are for {last_date_str} based on the latest available data</div>
+        </div>""", unsafe_allow_html=True)
+    elif status == "MARKET_OPEN":
+        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
+            <h3 style='margin-bottom: 0;'>🔔 Market is Open</h3>
+            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str} based on current time: {time_str}</div>
+        </div>""", unsafe_allow_html=True)
+    else:  # AFTER_MARKET_CLOSE
+        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
+            <h3 style='margin-bottom: 0;'>🔴 Market is Closed</h3>
+            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str}. Today's closing prices are final.</div>
+        </div>""", unsafe_allow_html=True)
+    
+    st.markdown("---")  # Add a separator line

@@ -8,7 +8,7 @@
         "module": "streamlit",
         "args": [
           "run",
-          "stock_predictors.py"
+          "stock_predictors4.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": false
