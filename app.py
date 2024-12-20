@@ -2,6 +2,42 @@ import streamlit as st
 from utils import get_nyse_datetime, market_status
 import yfinance as yf
 import pandas as pd
+import time as time_module
+
+def generate_market_status_header(date_str):
+    """Generate the header with the current date."""
+    return f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>"
+
+def generate_market_status_message(status, last_date_str, time_str):
+    """Generate the market status message based on the current market status."""
+    status_messages = {
+        "BEFORE_MARKET_OPEN": {
+            "icon": "⏳",
+            "title": "Market hasn't opened yet",
+            "subtitle": f"Predicted closing prices are for {last_date_str} based on the latest available data"
+        },
+        "MARKET_OPEN": {
+            "icon": "🔔",
+            "title": "Market is Open",
+            "subtitle": f"Predicted closing price for {last_date_str} based on current time: {time_str}"
+        },
+        "AFTER_MARKET_CLOSE": {
+            "icon": "🔴",
+            "title": "Market is Closed",
+            "subtitle": f"Predicted closing price for {last_date_str}. Today's closing prices are final."
+        }
+    }
+    
+    # Raise an error if the status is not found, which helps catch potential issues
+    if status not in status_messages:
+        raise ValueError(f"Unknown market status: {status}")
+    
+    message = status_messages[status]
+    
+    return f"""<div style='text-align: center; margin-top: -10px;'>
+        <h3 style='margin-bottom: 0;'>{message['icon']} {message['title']}</h3>
+        <div style='font-size: 10pt; margin-top: -10px;'>{message['subtitle']}</div>
+    </div>"""
 
 def display_market_status(last_available_date=None):
     """
@@ -15,39 +51,25 @@ def display_market_status(last_available_date=None):
     
     # Format and display current date
     date_str = current_time.strftime('%A, %B %d, %Y')
-    st.markdown(f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>", unsafe_allow_html=True)
+    st.markdown(generate_market_status_header(date_str), unsafe_allow_html=True)
 
     last_date_str = last_available_date.strftime('%A, %B %d')
     time_str = current_time.strftime('%I:%M %p EST')  # Add EST to the time
 
-    if status == "BEFORE_MARKET_OPEN":
-        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
-            <h3 style='margin-bottom: 0;'>⏳ Market hasn't opened yet</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing prices are for {last_date_str} based on the latest available data</div>
-        </div>""", unsafe_allow_html=True)
-    elif status == "MARKET_OPEN":
-        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
-            <h3 style='margin-bottom: 0;'>🔔 Market is Open</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str} based on current time: {time_str}</div>
-        </div>""", unsafe_allow_html=True)
-    else:  # AFTER_MARKET_CLOSE
-        st.markdown(f"""<div style='text-align: center; margin-top: -10px;'>
-            <h3 style='margin-bottom: 0;'>🔴 Market is Closed</h3>
-            <div style='font-size: 10pt; margin-top: -10px;'>Predicted closing price for {last_date_str}. Today's closing prices are final.</div>
-        </div>""", unsafe_allow_html=True)
+    st.markdown(generate_market_status_message(status, last_date_str, time_str), unsafe_allow_html=True)
     
     st.markdown("---")  # Add a separator line
 
-def display_results(results):
+def display_results(close_price_prediction):
     """
     Display latest market data and predictions for each ticker.
     Args:
-        results: List of tuples containing (ticker, prediction)
+        close_price_prediction: List of tuples containing (ticker, prediction)
     """
     # Initialize last_available_date as None
     last_available_date = None
     
-    for ticker, prediction in results:
+    for ticker, prediction in close_price_prediction:
         try:
             # Fetch latest data including previous day for previous close
             latest_data = yf.download(ticker, period='5d', interval='1d')
@@ -137,3 +159,59 @@ def update_selected_tickers(change):
     st.session_state.selected_tickers = updated_sel_tickers
     
     print(f"[AFTER MULTISELECT] Multiselect value: {st.session_state.selected_tickers}")
+
+def render_ui():
+    # Title of the app
+    st.title("Stock Price Predictor")
+
+    tickers = st.multiselect(
+        "Select stocks to predict:",
+        st.session_state.tickers,
+        default=st.session_state.selected_tickers,
+        key='stock_multiselect',
+        on_change=update_selected_tickers,
+        args=['stock_multiselect']
+    )
+
+    # Update selected tickers based on multiselect
+    st.session_state.selected_tickers = tickers
+
+    # Search bar for new tickers
+    new_ticker = st.text_input("Search for a stock ticker:", value=st.session_state.new_ticker, key="new_ticker_input")
+
+    # This clears out the ticker if there's a change in removing the ticker
+    # this way it doesn't keep appearing in the search bar after it's been removed
+    if new_ticker != st.session_state.new_ticker:
+        st.session_state.new_ticker = new_ticker
+
+    if new_ticker:
+        try:
+            stock_data = yf.download(new_ticker, period='1d')
+            if stock_data.empty:
+                st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
+            else:
+                new_ticker_upper = new_ticker.upper()
+                if new_ticker_upper not in [t.upper() for t in st.session_state.tickers]:
+                    st.session_state.tickers.insert(0, new_ticker_upper)
+                    st.session_state.selected_tickers.append(new_ticker_upper)
+                    st.rerun()
+                else:
+                    if new_ticker_upper not in [t.upper() for t in st.session_state.selected_tickers]:
+                        st.session_state.selected_tickers.append(new_ticker_upper)
+                        st.rerun()
+        except Exception as e:
+            st.error(f"Error: {e}")
+    st.session_state.new_ticker = ''
+
+    # Create two distinct containers
+    processing_container = st.container(key=f"processing_container_{st.session_state.results_key}")
+    results_container = st.container(key=f"results_container_{st.session_state.results_key}")
+
+    # Predict button and results area
+    predict_button = st.button("Predict")
+
+    if predict_button:
+        # Set a flag in session state to indicate prediction is requested
+        st.session_state.run_prediction = True
+        # Trigger a rerun to allow the controller to execute the pipeline
+        st.rerun()

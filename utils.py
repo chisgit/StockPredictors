@@ -1,4 +1,4 @@
-from datetime import datetime, time as dt_time
+from datetime import datetime, time as dt_time, timedelta
 import pytz
 
 # Define NYSE market hours (Global constants)
@@ -8,7 +8,7 @@ NYSE_TIMEZONE = pytz.timezone('America/New_York')
 
 def get_nyse_datetime():
     """Get current datetime in NYSE timezone"""
-    return datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE) #- timedelta(hours=5) for testing
+    return datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE) #- timedelta(hours=13) #for testing
 
 def get_nyse_date():
     """Get current date in NYSE timezone"""
