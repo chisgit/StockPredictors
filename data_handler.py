@@ -1,8 +1,10 @@
 import yfinance as yf
 from utils import get_nyse_date, get_nyse_datetime
-from data_processor import preprocess_data
+from data_processor import preprocess_data, preprocess_non_linear_data
+from feature_engineering import get_feature_columns
+import pandas as pd
 
-def fetch_data(ticker, end_date, start_date='2010-01-01'):
+def fetch_data(ticker, end_date, start_date='2008-01-01'):
     """
     Fetch historical data for a given ticker
     """
@@ -11,24 +13,35 @@ def fetch_data(ticker, end_date, start_date='2010-01-01'):
     
     # Download data
     df = yf.download(ticker, start=start_date, end=end_date)
+    
+    # Convert to multi-index DataFrame
+    # df.columns = pd.MultiIndex.from_product([[c for c in df.columns], [ticker]])
+    
     return df
 
-def fetch_features(ticker):
+def fetch_features(ticker, model_type="linear_regression"):
     """
-    Fetch recent stock data for prediction features.
+    Get the feature columns to use for prediction based on model type.
     """
-    # Get current time in NYSE timezone
-    current_time = get_nyse_datetime()
-    
     # Download data using period to ensure we get the right trading days
     stock_data = yf.download(ticker, period='5d')
-    print(f"Fetch Features stock_data")
-    print(stock_data)
+    print(f"DEBUG - fetch_features() - Raw stock data:\n", stock_data)
     
-    prediction_data = preprocess_data(stock_data).tail(1)
-    prediction_features = prediction_data[['Open', 'High', 'Low', 'Volume', 'Prev Close']]
+    if model_type == "linear_regression":
+        # Process the data to add Prev Close with correct MultiIndex format
+        processed_data = preprocess_data(stock_data)
+        print(f"DEBUG - fetch_features() - Processed data:\n", processed_data)
+        
+        # Get the ticker value and use the last row with correct column structure
+        ticker_value = processed_data.columns[1][1]
+        prediction_features = processed_data[[('Open', ticker_value), 
+                                           ('High', ticker_value), 
+                                           ('Low', ticker_value), 
+                                           ('Volume', ticker_value), 
+                                           ('Prev Close', ticker_value)]].iloc[-1:]
+        
+        print(f"DEBUG - fetch_features() - Prediction features:\n", prediction_features)
+        return prediction_features.values
     
-    print(f"Fetch DF to get Features prediction_data")
-    print(prediction_features)
-
-    return prediction_features
+    # Use get_feature_columns to get the right features for the model type
+    return get_feature_columns(processed_data, model_type)
