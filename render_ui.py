@@ -170,12 +170,12 @@ def display_results(predictions):
             # Calculate price difference if close price is available and market is not open
             diff_str = ""
             diff_color = ""  # Initialize with empty string
-            if market_status() != "MARKET_OPEN":
-                price_diff = prediction - current_close
-                if not pd.isna(price_diff):
-                    diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"  # Green if positive, red if negative
-                    diff_sign = "+" if price_diff >= 0 else ""
-                    diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${price_diff:.2f})</span>'
+            # if market_status() != "MARKET_OPEN":
+            price_diff = prediction - current_close
+            if not pd.isna(price_diff):
+                diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"  # Green if positive, red if negative
+                diff_sign = "+" if price_diff >= 0 else ""
+                diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${price_diff:.2f})</span>'
 
             # Display ticker with predicted close and difference
             st.markdown(
