@@ -33,22 +33,15 @@ def execute_pipeline(tickers):
             model_type = "linear_regression"
             if model_type == "linear_regression":
                 model = train_model(train_ready_data, model_type)
-                print("DEBUG - execute_pipeline() - Model trained successfully")
                 
                 # Get prediction features and make prediction
                 feature_cols = fetch_features(each_ticker, model_type)
-                print("DEBUG - execute_pipeline() - Feature columns:", feature_cols)
-                
+            
                 #prediction_data = train_ready_data[feature_cols].iloc[-1:].values
                 prediction_data = fetch_features(each_ticker, model_type)
-                
-                print("DEBUG - execute_pipeline() - Prediction data shape:", prediction_data.shape)
-                print("DEBUG - execute_pipeline() - Prediction data:", prediction_data)
-
+            
                 prediction = model.predict(prediction_data)
-                print("DEBUG - execute_pipeline() - Raw prediction:", prediction)
-                print("DEBUG - execute_pipeline() - Raw prediction type:", type(prediction))
-                
+               
                 # Convert prediction to scalar if needed
                 if isinstance(prediction, (list, np.ndarray)):
                     prediction = prediction.flatten()[0] if isinstance(prediction, np.ndarray) else prediction[0]
@@ -61,9 +54,11 @@ def execute_pipeline(tickers):
                 # Train model using XGBoost
                 model_type = "xgboost"
                 
-                # if model_type == "xgboost":
-                #     train_ready_data = preprocess_non_linear_data(train_ready_data)
-                # model = train_model(train_ready_data, model_type)
+                if model_type == "xgboost":
+                    train_ready_data = preprocess_non_linear_data(train_ready_data)
+                    print(f"DEBUG - execute_pipeline() - Non-Linear - Train ready DATA:\n", train_ready_data.tail())
+                    print(f"DEBUG - execute_pipeline() - Non-Linear - Train ready DATA columns:\n", train_ready_data.columns.tolist())
+                    model = train_model(train_ready_data, model_type)
 
                 # # Get prediction features and make prediction
                 # prediction_features = fetch_features(each_ticker, model_type)

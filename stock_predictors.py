@@ -1,6 +1,6 @@
 import streamlit as st
 import time as time_module
-from app import render_ui, display_results
+from render_ui import render_ui, display_results
 from pipeline import execute_pipeline
 from session_state import initialize_session_state
 
@@ -26,10 +26,10 @@ def main():
         tickers = st.session_state.selected_tickers
         
         # Execute pipeline
-        close_price_prediction = execute_pipeline(tickers)
+        predictions = execute_pipeline(tickers)
         
         # Display results
-        display_results(close_price_prediction)
+        display_results(predictions)
 
 # Run the main function
 if __name__ == "__main__":
