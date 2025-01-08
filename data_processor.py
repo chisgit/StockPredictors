@@ -37,39 +37,8 @@ def preprocess_non_linear_data(df):
 
     # Create next day's close (our target variable)
     df[('Next_Day_Close', ticker_value)] = df[('Close', ticker_value)].shift(-1)
-    
-    # Add standard technical indicators
-    df[('SMA_20', ticker_value)] = df[('Close', ticker_value)].rolling(window=20).mean()
-    df[('RSI', ticker_value)] = calculate_rsi(df[('Close', ticker_value)])
-    
-    # Add MACD
-    macd_data = calculate_macd(df[('Close', ticker_value)])
-    df[('MACD', ticker_value)] = macd_data['MACD']
-    df[('MACD_Signal', ticker_value)] = macd_data['Signal']
-    df[('MACD_Hist', ticker_value)] = macd_data['Histogram']
-    
-    # Add Bollinger Bands
-    bb_data = calculate_bollinger_bands(df[('Close', ticker_value)])
-    df[('BB_Upper', ticker_value)] = bb_data['Upper']
-    df[('BB_Lower', ticker_value)] = bb_data['Lower']
-
-    # Add Lagged features
-    base_features = ['Close', 'Volume']
-    lags = [1, 2]
-    lagged_features = []
-    
-    for feature in base_features:
-        for lag in lags:
-            lagged_col = (f'{feature}_Lag_{lag}')
-            df[lagged_col, ticker_value] = df[(feature, ticker_value)].shift(lag)
-            lagged_features.append(lagged_col)
-    
-    # Drop rows with NaN values (from technical indicators)
     df.dropna(inplace=True)
 
-    # Add this right before training the model (after feature extraction)
-    check_data_alignment(df, 'xgboost')
-    
     return df
 
 def check_data_alignment(df, model_type):
@@ -118,5 +87,3 @@ def calculate_bollinger_bands(prices, window=20):
         'Upper': sma + (std * 2),
         'Lower': sma - (std * 2)
     }
-
-
