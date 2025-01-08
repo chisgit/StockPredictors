@@ -18,6 +18,7 @@ def preprocess_data(df):
     
     # Get the ticker value from the DataFrame
     ticker_value = df.columns[0][1]
+    print(f"DEBUG - Ticker Value: LinProcessor \n{ticker_value}")
     
     # Add 'Prev Close' column by shifting 'Close'
     df[('Prev Close', ticker_value)] = df[('Close', ticker_value)].shift(1)
@@ -34,6 +35,7 @@ def preprocess_non_linear_data(df):
         return df
     
     ticker_value = df.columns[1][1]
+    print(f"DEBUG - Ticker Value: NonLinProcessor \n{ticker_value}")
 
     # Create next day's close (our target variable)
     df[('Next_Day_Close', ticker_value)] = df[('Close', ticker_value)].shift(-1)
