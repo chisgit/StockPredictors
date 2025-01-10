@@ -1,5 +1,6 @@
 from datetime import datetime, time as dt_time, timedelta
 import pytz
+import pandas as pd
 
 # Define NYSE market hours (Global constants)
 MARKET_OPEN = dt_time(9, 30)
@@ -28,3 +29,10 @@ def market_status():
         return "MARKET_OPEN"
     else:
         return "AFTER_MARKET_CLOSE"
+
+def get_last_row(data):
+    if isinstance(data, pd.DataFrame) and not data.empty:
+        return data.tail(1)  # Returns last row as DataFrame
+    elif isinstance(data, pd.Series) and not data.empty:
+        return data.iloc[-1]  # Returns last element as Series
+    return None  # Returns None for empty or unsupported types

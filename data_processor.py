@@ -17,37 +17,31 @@ def preprocess_data(df):
         return df
     
     # Get the ticker value from the DataFrame
-    ticker_value = df.columns[0][1]
-    print(f"DEBUG - Ticker Value: LinProcessor \n{ticker_value}")
+    ticker_value = df.columns[0][1]  # Second level contains ticker
     
     # Add 'Prev Close' column by shifting 'Close'
     df[('Prev Close', ticker_value)] = df[('Close', ticker_value)].shift(1)
-    df.dropna(inplace=True)
-
-    return df
-
-def preprocess_non_linear_data(df):
-    """
-    Preprocess stock data for machine learning with consistent features
-    """
-    if df.empty:
-        st.warning("No data returned for the ticker. Skipping.")
-        return df
-    
-    ticker_value = df.columns[1][1]
-    print(f"DEBUG - Ticker Value: NonLinProcessor \n{ticker_value}")
-
-    # Create next day's close (our target variable)
     df[('Next_Day_Close', ticker_value)] = df[('Close', ticker_value)].shift(-1)
+    
+    # Remove any rows with missing values
     df.dropna(inplace=True)
-
+    print("DEBUG: DataFrame after dropping missing values:\n", df.head())
+    
+    # Set the date as the index
+    #df.set_index(('Date', ticker_value), inplace=True)
+    
+    # Add ticker to columns
+    # ticker is already there as another index
+    df.columns = pd.MultiIndex.from_tuples([(col[0], ticker_value) if col[1] == '' else col for col in df.columns.tolist()])
+    print("DEBUG: DataFrame after setting columns:\n", df.head())
+    
     return df
 
 def check_data_alignment(df, model_type):
     # Print first few rows to check the alignment
     print(f"DEBUG-XBoost - First few rows of the dataframe:\n{df.head()}")
     # Print column names
-    print(f"DEBUG-XBoost - DataFrame Columns:\n{df.columns.tolist()}")
+    print(f"DEBUG-XBoost - DataFrame Columns:\n{df.columns.tolist()}\n")
 
     # Check for missing values in the feature columns
 
@@ -60,6 +54,31 @@ def check_data_alignment(df, model_type):
     
     # Print first few rows to check the alignment
     print(f"DEBUG-XBoost - First few rows of the dataframe:\n{df.head()}")
+
+    # Log the DataFrame structure before feature selection
+    print(f"DEBUG - DataFrame columns before feature selection: {df.columns.tolist()}")
+    
+    # Define base features
+    base_features = ['Prev Close', 'Volume']
+    
+    # Technical indicators - match on first level of column names
+    technical_features = [col[0] for col in df.columns 
+                         if col[0] in ['SMA_20', 'EMA', 'RSI', 'ROC', 'Momentum',
+                                     'BB', 'ATR', 'MACD', 'MACD_Signal', 'MACD_Hist',
+                                     'BB_Upper', 'BB_Lower', 'Price_Change',
+                                     'Returns', 'HL_Range', 'HL_Range_Pct']]
+    
+    # Lagged features
+    lagged_features = [col[0] for col in df.columns if 'Lag' in col[0]]
+    
+    # Log selected features
+    print(f"DEBUG - Base Features: {base_features}")
+    print(f"DEBUG - Technical Features: {technical_features}")
+    print(f"DEBUG - Lagged Features: {lagged_features}")
+    
+    if model_type == "linear_regression":
+        feature_columns = ['Open', 'High', 'Low'] + base_features
+        print(f"DEBUG - Feature columns for linear regression: {feature_columns}")
 
 def calculate_rsi(prices, period=14):
     """Calculate RSI technical indicator."""
