@@ -9,7 +9,7 @@ def fetch_data(ticker, end_date, start_date='2008-01-01'):
     Fetch historical data for a given ticker
     """
     # Get current date in NYSE timezone
-    end_date = get_nyse_date()
+    #end_date = get_nyse_date()
     
     # Download data
     df = yf.download(ticker, start=start_date, end=end_date)
