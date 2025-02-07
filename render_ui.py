@@ -136,7 +136,7 @@ def display_results(predictions):
     
     st.subheader("Today's Close Predictions")
     
-    print(f"Today's Close Predictions: {todays_close_predictions}")
+    print(f"Today's Close and Next_Day Predictions: {predictions}")
     
     for ticker, prediction in todays_close_predictions:
         try:

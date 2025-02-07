@@ -3,6 +3,7 @@ import numpy as np
 from ta.trend import MACD
 from ta.momentum import RSIIndicator
 from ta.volatility import BollingerBands
+from data_processor import calculate_rsi  # Move import to top with others
 
 def add_lagged_features(df, ticker_value, base_features = ['Close', 'Volume'], lags=[1, 2]):
     """
@@ -25,8 +26,7 @@ def add_lagged_features(df, ticker_value, base_features = ['Close', 'Volume'], l
             df[(lagged_col, ticker_value)] = df[(feature, ticker_value)].shift(lag)
             lagged_features.append(lagged_col)
     
-    df.dropna(inplace=True)
-    return df
+    return df  # Remove dropna, let NaNs flow through
 
 def add_moving_averages(df, ticker_value):
     """Calculate various moving averages."""
@@ -43,16 +43,16 @@ def add_momentum_indicators(df, ticker_value):
     """Calculate momentum indicators."""
     close_prices = df[('Close', ticker_value)]
     
-    # RSI
+    # RSI - switch back to using ta library's RSIIndicator
     rsi = RSIIndicator(close=close_prices, window=14)
     df.loc[:, ('RSI', ticker_value)] = rsi.rsi()
     
-    # Rate of Change
+    # Rate of Change - no need for fillna as NaNs are handled in preprocessing
     df.loc[:, ('ROC_5', ticker_value)] = close_prices.pct_change(periods=5)
     df.loc[:, ('ROC_10', ticker_value)] = close_prices.pct_change(periods=10)
     df.loc[:, ('ROC_20', ticker_value)] = close_prices.pct_change(periods=20)
     
-    # Momentum
+    # Momentum - no need for fillna as NaNs are handled in preprocessing
     df.loc[:, ('Momentum_5', ticker_value)] = close_prices.diff(5)
     df.loc[:, ('Momentum_10', ticker_value)] = close_prices.diff(10)
     
@@ -109,54 +109,51 @@ def add_price_derivatives(df, ticker_value):
     return df
 
 def add_technical_indicators(df, ticker_value):
-    """
-    Add technical indicators to the DataFrame
+    """Add technical indicators to the DataFrame"""
+    print(f"\n=== Starting Technical Indicators for {ticker_value} ===")
+    print(f"Input shape: {df.shape}")
     
-    Args:
-        df (pd.DataFrame): Input DataFrame with OHLCV data
-        ticker_value (str): Stock ticker symbol
+    # Make a copy of input data
+    df = df.copy()
     
-    Returns:
-        pd.DataFrame: DataFrame with added technical indicators
-    """
-      
+    # Add all technical indicators, letting NaNs accumulate
     df = add_moving_averages(df, ticker_value)
     df = add_momentum_indicators(df, ticker_value)
     df = add_volatility_indicators(df, ticker_value)
-
-    
     df = add_trend_indicators(df, ticker_value)
-    
     df = add_price_derivatives(df, ticker_value)
-    
-    # Add lagged features
     df = add_lagged_features(df, ticker_value)
+    
+    # Handle all NaNs at once after all calculations are done
+    print(f"Shape before NaN cleanup: {df.shape}")
+    df.dropna(inplace=True)
+    print(f"Final shape after NaN cleanup: {df.shape}")
     
     return df
 
-def get_feature_columns(df, model_type="linear_regression"):
+def get_feature_columns(model_type="linear_regression"):
     """
-    Get feature columns based on model type
+    Get feature columns based on model type. Each model type has its own 
+    predefined set of features that work best for that particular model.
+    
+    Args:
+        model_type (str): Type of model ("linear_regression" or "xgboost")
+    
+    Returns:
+        list: List of feature column names for the specified model type
     """
     if model_type == "linear_regression":
-        # For linear regression, use base features
+        # Linear regression uses simple features - less prone to overfitting
         return ['Open', 'High', 'Low', 'Prev Close', 'Volume']
-        
-    else:  # For XGBoost and other models
-        # Base features
-        base_features = ['Open', 'High', 'Low', 'Close', 'Prev Close', 'Volume']
-        
-        # Technical indicators
-        tech_features = [
-            'RSI', 'BB_Upper', 'BB_Lower', 'ATR',
-            'MACD', 'MACD_Signal', 'MACD_Hist',
-            'Price_Change', 'Returns', 'HL_Range', 'HL_Range_Pct'
-        ]
-        
-        # Lagged features
-        lagged_features = [
-            'Close_Lag_1', 'Close_Lag_2',
-            'Volume_Lag_1', 'Volume_Lag_2'
-        ]
-        
-        return base_features + tech_features + lagged_features
+    
+    elif model_type == "xgboost":
+        # XGBoost can handle more complex features
+        return ['Open', 'High', 'Low', 'Close', 'Prev Close', 'Volume',
+                'RSI', 'BB_Upper', 'BB_Lower', 'ATR',
+                'MACD', 'MACD_Signal', 'MACD_Hist',
+                'Price_Change', 'Returns', 'HL_Range', 'HL_Range_Pct',
+                'Close_Lag_1', 'Close_Lag_2',
+                'Volume_Lag_1', 'Volume_Lag_2']
+    
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")

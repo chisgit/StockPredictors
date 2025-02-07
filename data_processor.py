@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 
-def preprocess_data(df):
+def preprocess_data(df, model_type):
     """
     Preprocess stock data for machine learning
     
@@ -10,30 +10,19 @@ def preprocess_data(df):
         df (pd.DataFrame): Input stock data DataFrame
     
     Returns:
-        pd.DataFrame: Preprocessed stock data, to add Prev Close col
+        pd.DataFrame: Preprocessed stock data with MultiIndex columns
     """
     if df.empty:
         st.warning("No data returned for the ticker. Skipping.")
         return df
     
-    # Get the ticker value from the DataFrame
-    ticker_value = df.columns[0][1]  # Second level contains ticker
+    ticker_value = df.columns[0][1]
     
-    # Add 'Prev Close' column by shifting 'Close'
+    # Just add Prev Close without dropping NaNs
     df[('Prev Close', ticker_value)] = df[('Close', ticker_value)].shift(1)
-    df[('Next_Day_Close', ticker_value)] = df[('Close', ticker_value)].shift(-1)
     
-    # Remove any rows with missing values
-    df.dropna(inplace=True)
-    print("DEBUG: DataFrame after dropping missing values:\n", df.head())
-    
-    # Set the date as the index
-    #df.set_index(('Date', ticker_value), inplace=True)
-    
-    # Add ticker to columns
-    # ticker is already there as another index
+    # Ensure proper MultiIndex columns
     df.columns = pd.MultiIndex.from_tuples([(col[0], ticker_value) if col[1] == '' else col for col in df.columns.tolist()])
-    print("DEBUG: DataFrame after setting columns:\n", df.head())
     
     return df
 

@@ -25,3 +25,4 @@ build/
 # Local development settings
 *.log
 .DS_Store
+.aider*

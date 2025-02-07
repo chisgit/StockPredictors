@@ -22,14 +22,14 @@ def train_model(train_ready_data, model_type="linear_regression", X_val=None, y_
     """
     print(f"Current model type: {model_type}\n")
 
-    # Split the data into features and target for both models
-    feature_cols = get_feature_columns(model_type=model_type)
-    X = train_ready_data[[ (col, train_ready_data.columns[0][1]) for col in feature_cols ]]
-    y = train_ready_data[('Next_Day_Close', train_ready_data.columns[0][1])]  # Use Next_Day_Close for both models
-
+    # Split the data into features and target
+    feature_cols = get_feature_columns(train_ready_data.iloc[-1:], model_type)
+    X = train_ready_data[feature_cols]
+    y = train_ready_data[('Close')]  # Predict today's close
+    
     # Ensure predictions are consistent with today's close
     if model_type == "linear_regression":
-        y = train_ready_data[('Close', train_ready_data.columns[0][1])]  # Ensure correct target for today's close
+        y = train_ready_data[('Close')]  # Ensure correct target for today's close
     
     # Split the data into training and validation sets
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -43,12 +43,12 @@ def train_model(train_ready_data, model_type="linear_regression", X_val=None, y_
         #print(f"Last row data:\n{last_row}")
         
         # Get feature columns
-        feature_cols = get_feature_columns(model_type="linear_regression")
+        feature_cols = get_feature_columns(last_row, "linear_regression")
         #print(f"LINEAR REGRESSION- Feature columns: {feature_cols}")
                 
         # Prepare features and target
-        X = train_ready_data[[ (col, train_ready_data.columns[0][1]) for col in feature_cols ]]
-        y = train_ready_data[('Close', train_ready_data.columns[0][1])]  # Predict today's close
+        X = train_ready_data[feature_cols]
+        y = train_ready_data[('Close')]  # Predict today's close
 
         # Ensure X only includes the selected features
         #print(f"Shape of X for Linear Regression: {X.shape}")  # Debugging line
@@ -113,13 +113,13 @@ def train_model(train_ready_data, model_type="linear_regression", X_val=None, y_
         #print(f"XGBOOST- Last row data:\n{last_row}")
 
         # Get features for XGBoost
-        feature_cols = get_feature_columns(model_type="xgboost")
+        feature_cols = get_feature_columns(train_ready_data.iloc[-1:], "xgboost")
         #print("\nXGBoost Features:")
         #print(feature_cols)
 
         # Prepare features and target
-        X = train_ready_data[[ (col, train_ready_data.columns[0][1]) for col in feature_cols ]]
-        y = train_ready_data[('Next_Day_Close', train_ready_data.columns[0][1])]  # Predict next day's close
+        X = train_ready_data[feature_cols]
+        y = train_ready_data[('Next_Day_Close')]  # Predict next day's close
 
         # Scale features
         X_scaler = StandardScaler()
@@ -161,6 +161,19 @@ def train_model(train_ready_data, model_type="linear_regression", X_val=None, y_
         print(f"\nDEBUG: Shape of X_val: {X_val.shape if X_val is not None else 'None'}")
         print(f"DEBUG: Shape of y_val: {y_val.shape if y_val is not None else 'None'}")
 
+        # # Configure XGBoost model
+        # model = xgb.XGBRegressor(
+        #     n_estimators=1000,
+        #     learning_rate=0.01,
+        #     max_depth=5,
+        #     min_child_weight=1,
+        #     subsample=0.8,
+        #     colsample_bytree=0.8,
+        #     objective='reg:squarederror',
+        #     random_state=42,
+        #     eval_metric='rmse',
+        #     verbose=True
+        # )
         model.set_params(early_stopping_rounds=10)  # Set early_stopping_rounds
 
         if len(X_val) > 0 and len(y_val) > 0:
@@ -175,6 +188,22 @@ def train_model(train_ready_data, model_type="linear_regression", X_val=None, y_
             val_scores.append(val_score)
         else:
             print("Skipping fold with no validation data.")
+        # Fit the model using training data and validation data
+        # if X_val is not None and y_val is not None and len(X_val) > 0 and len(y_val) > 0:
+        #     print(f"\nDEBUG: Fitting the model with validation set\n")
+        #     model.fit(
+        #         X_train, 
+        #         y_train, 
+        #         eval_set=[(X_val, y_val)],  # Provide validation data
+        #         verbose=True                # Optional: Print progress
+        #     )
+        # else:
+        #     print("\nDEBUG: No validation set provided. Disabling early stopping.\n")
+        #     model.fit(X_train, y_train)
+        # Print the average validation RMSE
+
+        # Initialize list to store validation scores
+        
 
         if val_scores:
             print(f"Average Validation RMSE: {sum(val_scores) / len(val_scores):.4f}")
