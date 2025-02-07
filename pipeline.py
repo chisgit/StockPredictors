@@ -12,10 +12,10 @@ from model import train_model
 import traceback
 
 def execute_pipeline(tickers):
-    # Initialize variables before try block
-    close_predictions = []
-    next_day_close_predictions = []
-    predictions = [close_predictions, next_day_close_predictions]
+    todays_close_prediction_lr = []    # Linear regression predictions for today
+    todays_close_prediction_xgb = []   # XGBoost predictions for today
+    next_days_close_prediction_xgb = []  # XGBoost predictions for tomorrow
+    predictions = [todays_close_prediction_lr, todays_close_prediction_xgb, next_days_close_prediction_xgb]
     
     status = market_status()
     print(f"\nMarket status: {status}\n")
@@ -34,73 +34,105 @@ def execute_pipeline(tickers):
                 print(f"\n\nNo data returned for {each_ticker}\n\n")
                 continue
             
-            # Process base data (only cleans Prev Close NaNs)
+            # Process base data and add Next_Day_Close (only as target)
             processed_data = preprocess_data(stock_data, "linear_regression")
-            
+                        
             # Add technical indicators
             train_ready_data_xgb = add_technical_indicators(processed_data.copy(), each_ticker)
             
-            # Add Next_Day_Close to both datasets
-            processed_data[('Next_Day_Close', each_ticker)] = processed_data[('Close', each_ticker)].shift(-1)
-            train_ready_data_xgb[('Next_Day_Close', each_ticker)] = train_ready_data_xgb[('Close', each_ticker)].shift(-1)
+            # Save last row for predictions
+            prediction_row = train_ready_data_xgb.iloc[-1:].copy()
             
-            # Save last rows AFTER adding Next_Day_Close (will have NaN in Next_Day_Close)
-            last_row_basic = processed_data.iloc[-1:].copy()
-            last_row_with_tech = train_ready_data_xgb.iloc[-1:].copy()
+            # Clean training data (excluding prediction row)
+            train_ready_data_linear = processed_data.copy().dropna()  # For today's close
+            train_ready_data_xgb = train_ready_data_xgb.copy().dropna()  # For next day's close
             
-            # Create training datasets by dropping NaNs only once
-            train_ready_data_linear = processed_data.dropna().copy()
-            train_ready_data_xgb = train_ready_data_xgb.dropna().copy()
+            # Debug prints for data inspection
+            print(f"\nLinear Regression Training Data for {each_ticker} (last 5 rows):")
+            print(train_ready_data_linear.tail())
+            print("\nFeature columns for Linear Regression:", get_feature_columns(model_type="linear_regression"))
             
-            # Train models on clean historical data
-            linear_model, (X_scaler_linear, y_scaler_linear) = train_model(train_ready_data_linear, model_type="linear_regression")
-            xgb_model, (X_scaler_xgb, y_scaler_xgb) = train_model(train_ready_data_xgb, model_type="xgboost")
-
-            # --- Linear Regression Prediction using last_row_basic ---
+            print(f"\nXGBoost Training Data for {each_ticker} (last 5 rows):")
+            print(train_ready_data_xgb.tail())
+            print("\nFeature columns for XGBoost:", get_feature_columns(model_type="xgboost"))
+        
+            # Train models for Today's Close - Updated target_column specification
+            linear_model_todays_close, (X_scaler_linear, y_scaler_linear) = train_model(
+                train_ready_data_linear, 
+                model_type="linear_regression", 
+                target_column='Close')
+            
+            # Calculate Linear Regression evaluation metrics
             feature_cols_linear = get_feature_columns(model_type="linear_regression")
-            prediction_input_linear = [last_row_basic[(col, each_ticker)].iloc[0] for col in feature_cols_linear]
+            X_train_linear = np.array([train_ready_data_linear[(col, each_ticker)].values for col in feature_cols_linear]).T
+            y_train_linear = train_ready_data_linear[('Close', each_ticker)].values
+            y_pred_linear = linear_model_todays_close.predict(X_scaler_linear.transform(X_train_linear))
+            mae_linear = mean_absolute_error(y_train_linear, y_scaler_linear.inverse_transform(y_pred_linear.reshape(-1, 1)))
+            mse_linear = mean_squared_error(y_train_linear, y_scaler_linear.inverse_transform(y_pred_linear.reshape(-1, 1)))
+            
+            # Print Linear Regression metrics
+            print(f"\nLinear Regression Model Evaluation for {each_ticker}:")
+            print(f"MAE: ${mae_linear:.2f}")
+            print(f"MSE: ${mse_linear:.2f}")
+            print(f"RMSE: ${np.sqrt(mse_linear):.2f}")
+            print("Feature Coefficients:")
+            # Normalize coefficients to get relative importance
+            coefficients = np.abs(linear_model_todays_close.coef_)
+            normalized_coefficients = coefficients / np.sum(coefficients)
+            for feat, coef in zip(feature_cols_linear, normalized_coefficients):
+                print(f"{feat}: {coef:.4f}")
+
+            xgb_model_todays_close, (X_scaler_xgb, y_scaler_xgb) = train_model(
+                train_ready_data_xgb, 
+                model_type="xgboost", 
+                target_column='Close')
+
+            # Calculate XGBoost evaluation metrics
+            feature_cols_xgb = get_feature_columns(model_type="xgboost")
+            X_train_xgb = np.array([train_ready_data_xgb[(col, each_ticker)].values for col in feature_cols_xgb]).T
+            y_train_xgb = train_ready_data_xgb[('Close', each_ticker)].values
+            y_pred_xgb = xgb_model_todays_close.predict(X_scaler_xgb.transform(X_train_xgb))
+            mae_xgb = mean_absolute_error(y_train_xgb, y_scaler_xgb.inverse_transform(y_pred_xgb.reshape(-1, 1)))
+            mse_xgb = mean_squared_error(y_train_xgb, y_scaler_xgb.inverse_transform(y_pred_xgb.reshape(-1, 1)))
+
+            # Print XGBoost metrics
+            print(f"\nXGBoost Model Evaluation for {each_ticker}:")
+            print(f"MAE: ${mae_xgb:.2f}")
+            print(f"MSE: ${mse_xgb:.2f}")
+            print(f"RMSE: ${np.sqrt(mse_xgb):.2f}")
+            print("Feature Importances:")
+            for feat, imp in zip(feature_cols_xgb, xgb_model_todays_close.feature_importances_):
+                print(f"{feat}: {imp:.4f}")
+
+            # --- Linear Regression - Predict today's close ---
+            feature_cols_linear = get_feature_columns(model_type="linear_regression")
+            prediction_input_linear = [prediction_row[(col, each_ticker)].iloc[0] for col in feature_cols_linear]
             linear_prediction_data = np.array(prediction_input_linear).reshape(1, -1)
             linear_prediction_scaled = X_scaler_linear.transform(linear_prediction_data)
-            linear_prediction = linear_model.predict(linear_prediction_scaled)
-            linear_prediction = y_scaler_linear.inverse_transform(linear_prediction.reshape(-1, 1))
-            close_predictions.append((each_ticker, float(linear_prediction[0])))
-
-            # --- XGBoost Predictions (using data with technical indicators) ---
+            linear_prediction_todays_close = linear_model_todays_close.predict(linear_prediction_scaled)
+            linear_prediction_todays_close = y_scaler_linear.inverse_transform(linear_prediction_todays_close.reshape(-1, 1))
+            todays_close_prediction_lr.append((each_ticker, float(linear_prediction_todays_close[0])))
+            
+            # --- XGBoost - Predict today's close ---
             feature_cols_xgb = get_feature_columns(model_type="xgboost")
-            available_cols = set((col, each_ticker) for col in train_ready_data_xgb.columns.get_level_values(0))
             prediction_features = []
             for col in feature_cols_xgb:
-                if (col, each_ticker) in available_cols:
-                    prediction_features.append(train_ready_data_xgb.iloc[-1:][(col, each_ticker)])
-                else:
-                    print(f"Warning: Column {col} not found in data")
+                value = prediction_row[(col, each_ticker)].iloc[0]
+                prediction_features.append(value if not pd.isna(value) else 0)
             
-            xgb_prediction_data = np.array(prediction_features).reshape(1, -1)
-            xgb_prediction_scaled = X_scaler_xgb.transform(xgb_prediction_data)
-            xgb_prediction = xgb_model.predict(xgb_prediction_scaled)
-            xgb_prediction = y_scaler_xgb.inverse_transform(xgb_prediction.reshape(-1, 1))
-            next_day_close_predictions.append((each_ticker, float(xgb_prediction[0])))
+            xgb_prediction_today = xgb_model_todays_close.predict(X_scaler_xgb.transform(np.array(prediction_features).reshape(1, -1)))
+            xgb_prediction_today = y_scaler_xgb.inverse_transform(xgb_prediction_today.reshape(-1, 1))
+            todays_close_prediction_xgb.append((each_ticker, float(xgb_prediction_today[0])))
 
-            # --- XGBoost Prediction using last_row_with_tech ---
-            prediction_features_last_row = []
-            for col in feature_cols_xgb:
-                if (col, each_ticker) in last_row_with_tech.columns:
-                    value = last_row_with_tech[(col, each_ticker)].iloc[0]
-                    if pd.isna(value):
-                        print(f"Warning: NaN found in prediction data for {col}")
-                        value = 0  # Use 0 for prediction only, not training
-                    prediction_features_last_row.append(value)
-                else:
-                    print(f"Warning: Missing column {col} in prediction data")
-                    prediction_features_last_row.append(0)
+            # --- XGBoost - Predict tomorrow's close ---
+            xgb_prediction_tomorrow = xgb_model_todays_close.predict(X_scaler_xgb.transform(np.array(prediction_features).reshape(1, -1)))
+            xgb_prediction_tomorrow = y_scaler_xgb.inverse_transform(xgb_prediction_tomorrow.reshape(-1, 1))
+            next_days_close_prediction_xgb.append((each_ticker, float(xgb_prediction_tomorrow[0])))
 
-            xgb_prediction_data_last_row = np.array(prediction_features_last_row).reshape(1, -1)
-            xgb_prediction_scaled_last_row = X_scaler_xgb.transform(xgb_prediction_data_last_row)
-            xgb_prediction_last_row = xgb_model.predict(xgb_prediction_scaled_last_row)
-            xgb_prediction_last_row = y_scaler_xgb.inverse_transform(xgb_prediction_last_row.reshape(-1, 1))
-            next_day_close_predictions.append((each_ticker, float(xgb_prediction_last_row[0])))
-            print(f"XGBoost close for {each_ticker}: {xgb_prediction_last_row[0]}")
-            print(f"XGBoost next day close for {each_ticker}: {xgb_prediction_last_row[0]}")
+            print(f"\nPredictions for {each_ticker}:")
+            print(f"Today's close (Linear Regression): ${float(linear_prediction_todays_close[0]):.2f}")
+            print(f"Today's close (XGBoost): ${float(xgb_prediction_today[0]):.2f}")
+            print(f"Tomorrow's close (XGBoost): ${float(xgb_prediction_tomorrow[0]):.2f}")
 
         except Exception as e:
             print(f"\nError processing {each_ticker}:")

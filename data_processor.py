@@ -18,8 +18,9 @@ def preprocess_data(df, model_type):
     
     ticker_value = df.columns[0][1]
     
-    # Just add Prev Close without dropping NaNs
+    # Add both shifted columns without dropping NaNs
     df[('Prev Close', ticker_value)] = df[('Close', ticker_value)].shift(1)
+    df[('Next_Day_Close', ticker_value)] = df[('Close', ticker_value)].shift(-1)
     
     # Ensure proper MultiIndex columns
     df.columns = pd.MultiIndex.from_tuples([(col[0], ticker_value) if col[1] == '' else col for col in df.columns.tolist()])

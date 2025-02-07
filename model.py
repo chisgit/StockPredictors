@@ -1,201 +1,121 @@
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit
+from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 import xgboost as xgb
 from feature_engineering import get_feature_columns
 
-def train_model(train_ready_data, model_type="linear_regression", X_val=None, y_val=None):
-    """
-    Trains the model on the provided data.
-    
-    Args:
-        train_ready_data (pd.DataFrame): Preprocessed training data
-        model_type (str): Type of model to train
-        X_val (pd.DataFrame): Validation features (optional)
-        y_val (pd.Series): Validation target (optional)
-    
-    Returns:
-        Trained machine learning model and scaler
-    """
+def train_model(train_ready_data, model_type="linear_regression", target_column='Close'):
+    """Trains the model on the provided data."""
     print(f"Current model type: {model_type}\n")
-
-    # Split the data into features and target for both models
-    feature_cols = get_feature_columns(model_type=model_type)
-    X = train_ready_data[[ (col, train_ready_data.columns[0][1]) for col in feature_cols ]]
-    y = train_ready_data[('Next_Day_Close', train_ready_data.columns[0][1])]  # Use Next_Day_Close for both models
-
-    # Ensure predictions are consistent with today's close
-    if model_type == "linear_regression":
-        y = train_ready_data[('Close', train_ready_data.columns[0][1])]  # Ensure correct target for today's close
     
-    # Split the data into training and validation sets
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+    ticker = train_ready_data.columns[0][1]
+    feature_cols = get_feature_columns(model_type)
+
+    # Prepare features and target
+    X = train_ready_data[[(col, ticker) for col in feature_cols]]
+    y = train_ready_data[(target_column, ticker)]
+
+    # Split data into train, validation, and test sets (70%, 20%, 10%)
+    # Use the most recent data for testing and validation
+    test_size = int(len(X) * 0.1)
+    val_size = int(len(X) * 0.2)
     
+    # Split chronologically: past -> future
+    # Training: oldest data
+    # Validation: more recent data
+    # Test: most recent data (excluding the very last row for prediction)
+    X_train = X[:-test_size-val_size]
+    y_train = y[:-test_size-val_size]
+    
+    X_val = X[-test_size-val_size:-test_size]
+    y_val = y[-test_size-val_size:-test_size]
+    
+    X_test = X[-test_size:]
+    y_test = y[-test_size:]
+    
+    print(f"\nTime series split sizes (oldest to newest):")
+    print(f"Train: {len(X_train)} samples (oldest data)")
+    print(f"Validation: {len(X_val)} samples (more recent data)")
+    print(f"Test: {len(X_test)} samples (most recent data)")
+    print(f"\nDate ranges:")
+    print(f"Train: {X_train.index[0]} to {X_train.index[-1]}")
+    print(f"Validation: {X_val.index[0]} to {X_val.index[-1]}")
+    print(f"Test: {X_test.index[0]} to {X_test.index[-1]}")
+
+    # Scale features and target using only training data
+    X_scaler = StandardScaler().fit(X_train)
+    y_scaler = StandardScaler().fit(y_train.values.reshape(-1, 1))
+    
+    # Transform all sets
+    X_train_scaled = X_scaler.transform(X_train)
+    X_val_scaled = X_scaler.transform(X_val)
+    X_test_scaled = X_scaler.transform(X_test)
+    
+    y_train_scaled = y_scaler.transform(y_train.values.reshape(-1, 1)).ravel()
+    y_val_scaled = y_scaler.transform(y_val.values.reshape(-1, 1)).ravel()
+    y_test_scaled = y_scaler.transform(y_test.values.reshape(-1, 1)).ravel()
+
     if model_type == "linear_regression":
-        print(f"Train Model ()LINEAR REGRESSION- Shape of train_ready_data: \n {train_ready_data.shape}\n")
-        print(f"Train Model ()LINEAR REGRESSION- Columns in train_ready_data: \n{train_ready_data.columns.tolist()}\n")
-        
-        # Select the last row
-        last_row = train_ready_data.iloc[-1:]
-        #print(f"Last row data:\n{last_row}")
-        
-        # Get feature columns
-        feature_cols = get_feature_columns(model_type="linear_regression")
-        #print(f"LINEAR REGRESSION- Feature columns: {feature_cols}")
-                
-        # Prepare features and target
-        X = train_ready_data[[ (col, train_ready_data.columns[0][1]) for col in feature_cols ]]
-        y = train_ready_data[('Close', train_ready_data.columns[0][1])]  # Predict today's close
-
-        # Ensure X only includes the selected features
-        #print(f"Shape of X for Linear Regression: {X.shape}")  # Debugging line
-        
-        # Scale features and target
-        X_scaler = StandardScaler()
-        y_scaler = StandardScaler()
-        
-        print(f"\nDEBUG: Fitting the X_scaler in train_model function\n")
-        X_scaled = X_scaler.fit_transform(X)
-        print(f"Shape of X_scaled: {X_scaled.shape}")  # Debugging line
-        print(f"X_scaled size: {X_scaled.size}")  # Debugging line
-        print("X_scaled contents:")
-        print(X_scaled[:5])  # Display the first 5 rows
-        print(f"Shape of X_scaled: {X_scaled.shape}\n")  # Debugging line
-
-        print(f"\nDEBUG: Fitting the y_scaler in train_model function\n")
-        y_scaled = y_scaler.fit_transform(y.values.reshape(-1, 1))
-        
-        X_scaled = pd.DataFrame(X_scaled, columns=X.columns, index=X.index)
-        print(f"Shape of X_scaled for model training: {X_scaled.shape}")  # Debugging line
-
-        y_scaled = pd.Series(y_scaled.flatten(), index=y.index)
-        
-        # Use TimeSeriesSplit instead of random split
-        tscv = TimeSeriesSplit(n_splits=5)
-        cv_scores = []
-        
-        for train_idx, test_idx in tscv.split(X_scaled):
-            X_train, X_test = X_scaled.iloc[train_idx], X_scaled.iloc[test_idx]
-            y_train, y_test = y_scaled.iloc[train_idx], y_scaled.iloc[test_idx]
-            
-            model = LinearRegression()
-            model.fit(X_train, y_train)
-            score = model.score(X_test, y_test)
-            cv_scores.append(score)
-            
-        print(f"\nLinear Regression CV Scores: {cv_scores}")
-        print(f"Mean CV Score: {np.mean(cv_scores)}")
-        
-        # Train final model on all data
         model = LinearRegression()
-        print(f"Shape of X_scaled just before model.fit training: {X_scaled.shape}")  # Debugging line
-        model.fit(X_scaled, y_scaled)
+        model.fit(X_train_scaled, y_train_scaled)
         
-        # Print model coefficients with feature names
-        print("\nLinear Regression Coefficients:")
-        coefficients = model.coef_.flatten() if len(model.coef_.shape) > 1 else model.coef_
-        coef_dict = dict(zip(feature_cols, coefficients))
-        for feature, coef in coef_dict.items():
-            print(f"{feature}: {coef:0.4f}")
-            
-        return model, (X_scaler, y_scaler)
-    
-    elif model_type == "xgboost":
-        print("Entering XGBoost model training section")
-        print(f"XGBOOST- Shape of train_ready_data: {train_ready_data.shape}")
-        print(f"XGBOOST- Columns in train_ready_data: {train_ready_data.columns.tolist()}")
-
-        # Select the last row
-        last_row = train_ready_data.iloc[-1:]
-        #print(f"XGBOOST- Last row data:\n{last_row}")
-
-        # Get features for XGBoost
-        feature_cols = get_feature_columns(model_type="xgboost")
-        #print("\nXGBoost Features:")
-        #print(feature_cols)
-
-        # Prepare features and target
-        X = train_ready_data[[ (col, train_ready_data.columns[0][1]) for col in feature_cols ]]
-        y = train_ready_data[('Next_Day_Close', train_ready_data.columns[0][1])]  # Predict next day's close
-
-        # Scale features
-        X_scaler = StandardScaler()
-        y_scaler = StandardScaler()
-
-        print(f"\nDEBUG: Fitting the X_scaler in train_model function\n")
-        X_scaled = X_scaler.fit_transform(X)
-        print(f"Shape of X_scaled: {X_scaled.shape}")
-        X_scaled = pd.DataFrame(X_scaled, columns=X.columns, index=X.index)
-
-        print(f"\nDEBUG: Fitting the y_scaler in train_model function\n")
-        y_scaled = y_scaler.fit_transform(y.values.reshape(-1, 1))
-        y_scaled = pd.Series(y_scaled.flatten(), index=y.index)
-
-        # Use TimeSeriesSplit instead of random split
-        tscv = TimeSeriesSplit(n_splits=5)
-        val_scores = []
+        # Evaluate on all sets
+        train_score = model.score(X_train_scaled, y_train_scaled)
+        val_score = model.score(X_val_scaled, y_val_scaled)
+        test_score = model.score(X_test_scaled, y_test_scaled)
         
-        for train_idx, test_idx in tscv.split(X_scaled):
-            # Split the data into training and validation sets
-            X_train, X_val = X_scaled.iloc[train_idx], X_scaled.iloc[test_idx]
-            y_train, y_val = y_scaled.iloc[train_idx], y_scaled.iloc[test_idx]
-            
-            # Configure the XGBoost model
-            model = xgb.XGBRegressor(
-                n_estimators=1000,
-                learning_rate=0.01,
-                max_depth=5,
-                min_child_weight=1,
-                subsample=0.8,
-                colsample_bytree=0.8,
-                objective='reg:squarederror',
-                random_state=42,
-                eval_metric='rmse'
-            )
-            model.set_params(early_stopping_rounds=None) 
+        print(f"\nLinear Regression Scores (R²):")
+        print(f"Train: {train_score:.4f}")
+        print(f"Validation: {val_score:.4f}")
+        print(f"Test: {test_score:.4f}")
 
-        # Debug: Print shapes of validation data
-        print(f"\nDEBUG: Shape of X_val: {X_val.shape if X_val is not None else 'None'}")
-        print(f"DEBUG: Shape of y_val: {y_val.shape if y_val is not None else 'None'}")
+    else:  # XGBoost
+        model = xgb.XGBRegressor(
+            n_estimators=1000,
+            learning_rate=0.01,
+            max_depth=5,
+            min_child_weight=1,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            objective='reg:squarederror',
+            random_state=42
+        )
+        
+        # Train with validation set for monitoring
+        eval_set = [(X_train_scaled, y_train_scaled),
+                   (X_val_scaled, y_val_scaled)]
+        
+        model.fit(X_train_scaled, y_train_scaled,
+                 eval_set=eval_set,
+                 eval_metric='rmse',
+                 verbose=False)
+        
+        # Get predictions for all sets
+        train_pred = model.predict(X_train_scaled)
+        val_pred = model.predict(X_val_scaled)
+        test_pred = model.predict(X_test_scaled)
+        
+        # Calculate RMSE for all sets
+        train_rmse = np.sqrt(mean_squared_error(y_train_scaled, train_pred))
+        val_rmse = np.sqrt(mean_squared_error(y_val_scaled, val_pred))
+        test_rmse = np.sqrt(mean_squared_error(y_test_scaled, test_pred))
+        
+        print(f"\nXGBoost RMSE Scores:")
+        print(f"Train: {train_rmse:.4f}")
+        print(f"Validation: {val_rmse:.4f}")
+        print(f"Test: {test_rmse:.4f}")
 
-        model.set_params(early_stopping_rounds=10)  # Set early_stopping_rounds
+    # Store evaluation metrics in model object for access in pipeline
+    model.train_score_ = train_score if model_type == "linear_regression" else train_rmse
+    model.val_score_ = val_score if model_type == "linear_regression" else val_rmse
+    model.test_score_ = test_score if model_type == "linear_regression" else test_rmse
 
-        if len(X_val) > 0 and len(y_val) > 0:
-            model.fit(
-                X_train, 
-                y_train, 
-                eval_set=[(X_val, y_val)], 
-                verbose=False  # Disable progress logs for brevity
-            )
-            # Evaluate model performance on validation set
-            val_score = model.evals_result()['validation_0']['rmse'][-1]
-            val_scores.append(val_score)
-        else:
-            print("Skipping fold with no validation data.")
+    return model, (X_scaler, y_scaler)
 
-        if val_scores:
-            print(f"Average Validation RMSE: {sum(val_scores) / len(val_scores):.4f}")
-        else:
-            print("No validation scores to report.")
-        # Get feature importance
-        importance = model.feature_importances_
-        feature_importance = pd.DataFrame({
-            'feature': feature_cols,
-            'importance': importance
-        })
-        feature_importance = feature_importance.sort_values('importance', ascending=False)
-        print("\nXGBoost Feature Importance:")
-        print(feature_importance)
-
-        # Make prediction for next day close
-        next_day_close_prediction = model.predict(X_scaled.iloc[-1:])
-        print(f"\nXGBoost Prediction for next day close: ${next_day_close_prediction[0]:.2f}\n")
-
-        return model, (X_scaler, y_scaler)
-    
 def feature_importance(model, X):
     """
     Extract and print feature importances for interpretable models.
