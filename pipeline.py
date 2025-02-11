@@ -82,7 +82,7 @@ def execute_pipeline(tickers):
                 xgb_prediction = y_scaler_xgb.inverse_transform(xgb_prediction.reshape(-1, 1))
                 todays_close_predictions.append((each_ticker, float(xgb_prediction[0])))
 
-                # --- XGBoost Prediction using last_row_with_tech ---
+                # --- XGBoost Next Days Prediction using last_row_with_tech ---
                 prediction_features_last_row = []
                 for col in feature_cols_xgb:
                     if (col, each_ticker) in last_row_with_tech.columns:
@@ -100,8 +100,8 @@ def execute_pipeline(tickers):
                 xgb_prediction_last_row = xgb_model.predict(xgb_prediction_scaled_last_row)
                 xgb_prediction_last_row = y_scaler_xgb.inverse_transform(xgb_prediction_last_row.reshape(-1, 1))
                 next_days_close_predictions.append((each_ticker, float(xgb_prediction_last_row[0])))
-                print(f"XGBoost close for {each_ticker}: {xgb_prediction_last_row[0]}")
-                print(f"XGBoost next day close for {each_ticker}: {xgb_prediction_last_row[0]}")
+                print(f"DEBUG XGBoost close for {each_ticker}: {todays_close_predictions[1]}\n")
+                print(f"DEBUG XGBoost next day close for {each_ticker}: {next_days_close_predictions}\n")
             except Exception as e:
                 print(f"Error processing {each_ticker}: {str(e)}")
                 # Log the current state of predictions even if an error occurs
