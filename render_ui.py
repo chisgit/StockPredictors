@@ -127,9 +127,8 @@ def display_results(predictions):
     """
     Display latest market data and predictions for each ticker.
     Args:
-        close_price_prediction: List of tuples containing (ticker, prediction)
+        predictions: List containing [todays_close_predictions, next_day_close_predictions]
     """
-    # Initialize last_available_date as None
     last_available_date = None
     todays_close_predictions = predictions[0]
     next_day_close_predictions = predictions[1]
@@ -138,26 +137,29 @@ def display_results(predictions):
     
     print(f"Today's Close and Next_Day Predictions: {predictions}")
     
+    # Group predictions by ticker while preserving order
+    grouped_predictions = {}
     for ticker, prediction in todays_close_predictions:
+        if ticker not in grouped_predictions:
+            grouped_predictions[ticker] = []
+        grouped_predictions[ticker].append(prediction)
+    
+    # Process each ticker once
+    for ticker in dict.fromkeys(t for t, _ in todays_close_predictions):  # Preserve original order
         try:
-            # Fetch latest data including previous day for previous close
             latest_data = yf.download(ticker, period='5d', interval='1d')
             
-            if len(latest_data) < 2:  # Check length first
+            if len(latest_data) < 2:
                 st.warning(f"Insufficient data available for {ticker}. Need at least 2 days of data to show previous close.")
                 continue
             
-            # Get the last available date from the first valid ticker data
             if last_available_date is None:
                 last_available_date = latest_data.index[-1].date()
-                # Display market status after we have the last available date
                 display_market_status(last_available_date)
             
-            # Get current day's data
             current_data = latest_data.iloc[-1]
             prev_data = latest_data.iloc[-2]
             
-            # Extract values using .item() for all Series
             try:
                 current_close = current_data['Close'].item()
                 prev_close = prev_data['Close'].item()
@@ -169,25 +171,33 @@ def display_results(predictions):
                 st.error(f"Error extracting data for {ticker}: {str(e)}")
                 continue
 
-            # Calculate price difference if close price is available and market is not open
-            diff_str = ""
-            diff_color = ""  # Initialize with empty string
-            # if market_status() != "MARKET_OPEN":
-            price_diff = prediction - current_close
-            if not pd.isna(price_diff):
-                diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"  # Green if positive, red if negative
-                diff_sign = "+" if price_diff >= 0 else ""
-                diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${price_diff:.2f})</span>'
+            # Display ticker header
+            st.markdown(f'<div style="margin: 20px 0 10px 0; font-size: 1.2em; font-weight: bold;">{ticker}</div>', unsafe_allow_html=True)
+            
+            # Display all predictions for this ticker
+            for i, prediction in enumerate(grouped_predictions[ticker]):
+                model_type = "Linear Regression" if i == 0 else "XGBoost"
+                price_diff = prediction - current_close
+                diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"
+                
+                # Fix syntax error in this section
+                if price_diff > 0:
+                    diff_sign = "+"
+                elif price_diff < 0:
+                    diff_sign = "-"
+                else:
+                    diff_sign = ""
+                    
+                diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
+                
+                st.markdown(
+                    f'<div style="margin-left: 20px; margin-bottom: 5px;">'
+                    f'{model_type} Prediction: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
 
-            # Display ticker with predicted close and difference
-            st.markdown(
-                f'<div style="margin-bottom: 5px; font-size: 1.1em; font-weight: bold;">'
-                f'{ticker} - Predicted Close: <span style="font-size: 1.15em;">${prediction:.2f}</span>{diff_str}'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-
-            # Format values
+            # Format and display single grid
             open_val = f"${open_price:.2f}" if not pd.isna(open_price) else "N/A"
             high_val = f"${high_price:.2f}" if not pd.isna(high_price) else "N/A"
             low_val = f"${low_price:.2f}" if not pd.isna(low_price) else "N/A"
@@ -200,7 +210,6 @@ def display_results(predictions):
             metrics = ['Open', 'High', 'Low', 'Prev Close', current_label, 'Volume']
             values = [open_val, high_val, low_val, prev_close_val, current_val, volume_val]
             
-            # Create HTML table with refined styling and theme-appropriate colors
             html = f"""
             <div style="margin: 10px 0;">
                 <table style="width: 100%; text-align: center; border-collapse: collapse;">
@@ -217,7 +226,8 @@ def display_results(predictions):
         except Exception as e:
             st.error(f"Error processing {ticker}: {str(e)}")
             continue
-     # Display next day predictions if available
+
+    # Display next day predictions if available
     if next_day_close_predictions:
         st.markdown("---")
         st.subheader("Next Day's Close Predictions")
