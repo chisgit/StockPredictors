@@ -57,7 +57,7 @@ def execute_pipeline(tickers):
             xgb_model, (X_scaler_xgb, y_scaler_xgb) = train_model(train_ready_data_xgb, model_type="xgboost")
 
             try:
-                # --- Linear Regression Prediction using last_row_basic ---
+                # --- Todays Close Linear Regression Prediction using last_row_basic ---
                 feature_cols_linear = get_feature_columns(model_type="linear_regression")
                 prediction_input_linear = [last_row_basic[(col, each_ticker)].iloc[0] for col in feature_cols_linear]
                 linear_prediction_data = np.array(prediction_input_linear).reshape(1, -1)
@@ -66,7 +66,7 @@ def execute_pipeline(tickers):
                 linear_prediction = y_scaler_linear.inverse_transform(linear_prediction.reshape(-1, 1))
                 todays_close_predictions.append((each_ticker, float(linear_prediction[0])))
 
-                # --- XGBoost Predictions (using data with technical indicators) ---
+                # --- Today's CloseXGBoost Predictions (using data with technical indicators) ---
                 feature_cols_xgb = get_feature_columns(model_type="xgboost")
                 available_cols = set((col, each_ticker) for col in train_ready_data_xgb.columns.get_level_values(0))
                 prediction_features = []
@@ -80,7 +80,7 @@ def execute_pipeline(tickers):
                 xgb_prediction_scaled = X_scaler_xgb.transform(xgb_prediction_data)
                 xgb_prediction = xgb_model.predict(xgb_prediction_scaled)
                 xgb_prediction = y_scaler_xgb.inverse_transform(xgb_prediction.reshape(-1, 1))
-                next_days_close_predictions.append((each_ticker, float(xgb_prediction[0])))
+                todays_close_predictions.append((each_ticker, float(xgb_prediction[0])))
 
                 # --- XGBoost Prediction using last_row_with_tech ---
                 prediction_features_last_row = []
