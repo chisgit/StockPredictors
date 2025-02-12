@@ -5,7 +5,7 @@ import pandas as pd
 import time as time_module
 from rules import UI_RULES, MARKET_HOURS
 from display_market_status import display_market_status
-
+from render_helpers import group_predictions_by_ticker
 
 def display_results(predictions):
     """Display latest market data and predictions for each ticker."""
@@ -21,13 +21,11 @@ def display_results(predictions):
     print(f"Today's Close and Next_Day Predictions: {predictions}")
     
     # Group predictions by ticker while preserving order
-    grouped_predictions = {}
-    grouped_next_day_predictions = {}
+    grouped_predictions, grouped_next_day_predictions = group_predictions_by_ticker(todays_close_predictions, next_day_close_predictions)
     ticker_data = {}  # Cache for storing downloaded data per ticker
     
-    for ticker, prediction in todays_close_predictions:
-        if ticker not in grouped_predictions:
-            grouped_predictions[ticker] = []
+    for ticker in dict.fromkeys(t for t, _ in todays_close_predictions):
+        try:
             # Download data once per ticker
             try:
                 ticker_data[ticker] = yf.download(ticker, period='5d', interval='1d')
@@ -38,12 +36,9 @@ def display_results(predictions):
             except Exception as e:
                 print(f"Error getting data for {ticker}: {str(e)}")
                 continue
-        grouped_predictions[ticker].append(prediction)
-    
-    for ticker, prediction in next_day_close_predictions:
-        if ticker not in grouped_next_day_predictions:
-            grouped_next_day_predictions[ticker] = []
-        grouped_next_day_predictions[ticker].append(prediction)
+        except Exception as e:
+            st.error(f"Error processing {ticker}: {str(e)}")
+            continue
 
     # Process each ticker once for today's close
     for ticker in dict.fromkeys(t for t, _ in todays_close_predictions):
