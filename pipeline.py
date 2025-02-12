@@ -41,13 +41,17 @@ def execute_pipeline(tickers):
             # Add technical indicators
             train_ready_data_xgb = add_technical_indicators(processed_data.copy(), ticker)
             
-            # Add Next_Day_Close to both datasets
-            processed_data[('Next_Day_Close', ticker)] = processed_data[('Close', ticker)].shift(-1)
-            train_ready_data_xgb[('Next_Day_Close', ticker)] = train_ready_data_xgb[('Close', ticker)].shift(-1)
+            # Get ticker from data columns
+            ticker_level = 1  # Index of ticker in MultiIndex
+            current_ticker = processed_data.columns[0][ticker_level]
+            
+            # Replace all direct [0][1] accesses with current_ticker
+            processed_data[('Next_Day_Close', current_ticker)] = processed_data[('Close', current_ticker)].shift(-1)
+            train_ready_data_xgb[('Next_Day_Close', current_ticker)] = train_ready_data_xgb[('Close', current_ticker)].shift(-1)
             
             print("\nVerifying Next_Day_Close data:")
-            print(f"Sample of Next_Day_Close values:\n{train_ready_data_xgb[('Next_Day_Close', ticker)].tail()}")
-            print(f"Sample of Close values:\n{train_ready_data_xgb[('Close', ticker)].tail()}")
+            print(f"Sample of Next_Day_Close values:\n{train_ready_data_xgb[('Next_Day_Close', current_ticker)].tail()}")
+            print(f"Sample of Close values:\n{train_ready_data_xgb[('Close', current_ticker)].tail()}")
 
             # Save last rows AFTER adding Next_Day_Close (will have NaN in Next_Day_Close)
             last_row_basic = processed_data.iloc[-1:].copy()
@@ -59,7 +63,11 @@ def execute_pipeline(tickers):
             
             # Train separate models for this specific ticker
             models[ticker] = {
-                'linear': {
+                'linear_today': {
+                    'model': None,
+                    'scalers': None
+                },
+                'linear_next_day': {
                     'model': None,
                     'scalers': None
                 },
@@ -73,11 +81,18 @@ def execute_pipeline(tickers):
                 }
             }
             
-            # Train linear regression for this ticker
-            models[ticker]['linear']['model'], models[ticker]['linear']['scalers'] = train_model(
+            # Train linear regression for today's close for this ticker
+            models[ticker]['linear_today']['model'], models[ticker]['linear_today']['scalers'] = train_model(
                 train_ready_data_linear,
                 model_type="linear_regression",
                 target="today"
+            )
+
+            # Train linear regression for next day's close for this ticker
+            models[ticker]['linear_next_day']['model'], models[ticker]['linear_next_day']['scalers'] = train_model(
+                train_ready_data_linear,
+                model_type="linear_regression",
+                target="next_day"
             )
             
             # Train XGBoost for today's close for this ticker
@@ -96,8 +111,11 @@ def execute_pipeline(tickers):
             
             try:
                 # Make predictions using this ticker's specific models
-                linear_model = models[ticker]['linear']['model']
-                X_scaler_linear, y_scaler_linear = models[ticker]['linear']['scalers']
+                linear_model_today = models[ticker]['linear_today']['model']
+                X_scaler_linear_today, y_scaler_linear_today = models[ticker]['linear_today']['scalers']
+                
+                linear_model_next_day = models[ticker]['linear_next_day']['model']
+                X_scaler_linear_next_day, y_scaler_linear_next_day = models[ticker]['linear_next_day']['scalers']
                 
                 xgb_model_today = models[ticker]['xgboost_today']['model']
                 X_scaler_xgb_today, y_scaler_xgb_today = models[ticker]['xgboost_today']['scalers']
@@ -106,13 +124,22 @@ def execute_pipeline(tickers):
                 X_scaler_xgb_next_day, y_scaler_xgb_next_day = models[ticker]['xgboost_next_day']['scalers']
                 
                 # --- Todays Close Linear Regression Prediction using last_row_basic ---
-                feature_cols_linear = get_feature_columns(model_type="linear_regression", target="today")
-                prediction_input_linear = [last_row_basic[(col, ticker)].iloc[0] for col in feature_cols_linear]
-                linear_prediction_data = np.array(prediction_input_linear).reshape(1, -1)
-                linear_prediction_scaled = X_scaler_linear.transform(linear_prediction_data)
-                linear_prediction = linear_model.predict(linear_prediction_scaled)
-                linear_prediction = y_scaler_linear.inverse_transform(linear_prediction.reshape(-1, 1))
-                todays_close_predictions.append((ticker, float(linear_prediction[0])))
+                feature_cols_linear_today = get_feature_columns(model_type="linear_regression", target="today")
+                prediction_input_linear_today = [last_row_basic[(col, ticker)].iloc[0] for col in feature_cols_linear_today]
+                linear_prediction_data_today = np.array(prediction_input_linear_today).reshape(1, -1)
+                linear_prediction_scaled_today = X_scaler_linear_today.transform(linear_prediction_data_today)
+                linear_prediction_today = linear_model_today.predict(linear_prediction_scaled_today)
+                linear_prediction_today = y_scaler_linear_today.inverse_transform(linear_prediction_today.reshape(-1, 1))
+                todays_close_predictions.append((ticker, float(linear_prediction_today[0])))
+
+                # Linear Regression prediction for next day
+                feature_cols_linear_next = get_feature_columns(model_type="linear_regression", target="next_day")
+                prediction_input_linear_next = [last_row_basic[(col, ticker)].iloc[0] for col in feature_cols_linear_next]
+                linear_prediction_data_next = np.array(prediction_input_linear_next).reshape(1, -1)
+                linear_prediction_scaled_next = X_scaler_linear_next_day.transform(linear_prediction_data_next)
+                linear_prediction_next = linear_model_next_day.predict(linear_prediction_scaled_next)
+                linear_prediction_next = y_scaler_linear_next_day.inverse_transform(linear_prediction_next.reshape(-1, 1))
+                next_days_close_predictions.append((ticker, float(linear_prediction_next[0])))
 
                 # XGBoost prediction for today's close
                 feature_cols_xgb_today = get_feature_columns(model_type="xgboost", target="today")
@@ -155,6 +182,7 @@ def execute_pipeline(tickers):
                 
                 # Fix debugging output formatting
                 print(f"DEBUG XGBoost today's close for {ticker}: {float(xgb_prediction_today[0]):.2f}")
+                print(f"DEBUG Linear Regression next day close for {ticker}: {float(linear_prediction_next[0]):.2f}")
                 print(f"DEBUG XGBoost next day close for {ticker}: {float(xgb_prediction_next_day[0]):.2f}")
                 
             except Exception as e:

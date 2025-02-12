@@ -19,21 +19,22 @@ def train_model(train_ready_data, model_type="linear_regression", X_val=None, y_
     """
     print(f"\nTraining {model_type} model for {target}'s close")
     
-    # Get ticker from the data
-    ticker = train_ready_data.columns[0][1]
-    print(f"Training model for ticker: {ticker}")
+    # Get ticker from data columns
+    ticker_level = 1  # Index of ticker in MultiIndex
+    current_ticker = train_ready_data.columns[0][ticker_level]
+    print(f"Training model for ticker: {current_ticker}")
     
     # Get features with target parameter
     feature_cols = get_feature_columns(model_type=model_type, target=target)
-    X = train_ready_data[[(col, ticker) for col in feature_cols]]
+    X = train_ready_data[[(col, current_ticker) for col in feature_cols]]
     
     # Select target based on prediction goal
     if target == "today":
-        y = train_ready_data[('Close', ticker)]
-        print(f"Using Close price as target for {ticker}")
+        y = train_ready_data[('Close', current_ticker)]
+        print(f"Using Close price as target for {current_ticker}")
     else:  # next_day
-        y = train_ready_data[('Next_Day_Close', ticker)]
-        print(f"Using Next_Day_Close as target for {ticker}")
+        y = train_ready_data[('Next_Day_Close', current_ticker)]
+        print(f"Using Next_Day_Close as target for {current_ticker}")
     
     # Scale features and target
     X_scaler = StandardScaler()
@@ -100,7 +101,7 @@ def train_model(train_ready_data, model_type="linear_regression", X_val=None, y_
             'feature': feature_cols,
             'importance': model.feature_importances_
         }).sort_values('importance', ascending=False)
-        print(f"\nFeature importance for {ticker}:")
+        print(f"\nFeature importance for {current_ticker}:")
         print(importance)
 
     return model, (X_scaler, y_scaler)
