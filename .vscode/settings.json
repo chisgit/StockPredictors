@@ -1,0 +1,28 @@
+{
+  "python.pythonPath": ".venv\\Scripts\\python.exe",
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "args": [
+        "-NoExit",
+        "-Command",
+        ". '${workspaceFolder}\\.venv\\Scripts\\Activate.ps1'"
+      ]
+    },
+    "Command Prompt": {
+      "path": [
+        "${env:windir}\\System32\\cmd.exe"
+      ],
+      "args": [
+        "/K",
+        ".\\.venv\\Scripts\\activate.bat"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "github.copilot.enable": true,
+  "github.copilot.advanced": {
+    "instructions": ".github/copilot-instructions.md"
+  }
+}

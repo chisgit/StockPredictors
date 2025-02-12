@@ -2,7 +2,8 @@ import streamlit as st
 from utils import get_nyse_datetime, market_status
 import yfinance as yf
 import pandas as pd
-import time as time_module     
+import time as time_module
+from rules import UI_RULES, MARKET_HOURS     
 
 
 def generate_market_status_header(date_str):
@@ -126,6 +127,11 @@ def display_market_status(last_available_date=None):
 
 def display_results(predictions):
     """Display latest market data and predictions for each ticker."""
+    # Enforce maximum tickers rule
+    if len(st.session_state.selected_tickers) > UI_RULES['max_tickers']:
+        st.warning(f"Maximum {UI_RULES['max_tickers']} tickers can be selected at once. Only showing first {UI_RULES['max_tickers']} tickers.")
+        st.session_state.selected_tickers = st.session_state.selected_tickers[:UI_RULES['max_tickers']]
+    
     last_available_date = None
     todays_close_predictions = predictions[0]
     next_day_close_predictions = predictions[1]
@@ -175,6 +181,13 @@ def display_results(predictions):
                 high_price = current_data['High'].item()
                 low_price = current_data['Low'].item()
                 volume = current_data['Volume'].item()
+
+                # Format numbers according to UI rules
+                current_close = round(current_close, UI_RULES['price_decimals'])
+                prev_close = round(prev_close, UI_RULES['price_decimals'])
+                open_price = round(open_price, UI_RULES['price_decimals'])
+                high_price = round(high_price, UI_RULES['price_decimals'])
+                low_price = round(low_price, UI_RULES['price_decimals'])
             except Exception as e:
                 st.error(f"Error extracting data for {ticker}: {str(e)}")
                 continue
@@ -289,8 +302,18 @@ def update_selected_tickers(change):
     print(f"[AFTER MULTISELECT] Multiselect value: {st.session_state.selected_tickers}")
 
 def render_ui():
-    # Title of the app
     st.title("Stock Price Predictor")
+
+    # Initialize default tickers if not already in session state
+    if 'tickers' not in st.session_state:
+        st.session_state.tickers = UI_RULES['default_tickers']
+    
+    if 'selected_tickers' not in st.session_state:
+        st.session_state.selected_tickers = UI_RULES['default_tickers'].copy()
+
+    # Add warning if max tickers limit is reached
+    if len(st.session_state.selected_tickers) >= UI_RULES['max_tickers']:
+        st.warning(f"Maximum {UI_RULES['max_tickers']} tickers can be selected")
 
     tickers = st.multiselect(
         "Select stocks to predict:",
@@ -298,7 +321,8 @@ def render_ui():
         default=st.session_state.selected_tickers,
         key='stock_multiselect',
         on_change=update_selected_tickers,
-        args=['stock_multiselect']
+        args=['stock_multiselect'],
+        max_selections=UI_RULES['max_tickers']
     )
 
     # Update selected tickers based on multiselect
