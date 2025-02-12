@@ -245,8 +245,8 @@ def display_results(predictions):
             if ticker in grouped_next_day_predictions and ticker in ticker_data:
                 try:
                     latest_data = ticker_data[ticker]  # Use cached data
-                    if len(latest_data) >= 1:
-                        current_close = latest_data['Close'].iloc[-1]
+                    if not latest_data.empty and len(latest_data) >= 1:  # Fixed condition
+                        current_close = latest_data['Close'].iloc[-1].item()  # Added .item()
                         
                         # Combine ticker header with predictions on same line
                         predictions_html = ""
