@@ -1,6 +1,6 @@
 import streamlit as st
 from utils import get_nyse_datetime, market_status
-from render_helpers import get_recent_data, group_predictions_by_ticker, format_ticker_data, display_predictions
+from render_helpers import get_recent_data, group_predictions_by_ticker, format_ticker_data, display_predictions, preds_sameline
 import yfinance as yf
 import pandas as pd
 import time as time_module
@@ -66,21 +66,7 @@ def display_results(predictions):
             grouped_predictions = process_todays_predictions(todays_close_predictions, ticker_data)
             
             # Combine ticker header with predictions on same line
-            predictions_html = ""
-            for i, prediction in enumerate(grouped_predictions[ticker]):
-                model_type = "Linear Regression" if i == 0 else "XGBoost"
-                price_diff = prediction - current_val
-                diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"
-                
-                if price_diff > 0:
-                    diff_sign = "+"
-                elif price_diff < 0:
-                    diff_sign = "-"
-                else:
-                    diff_sign = ""
-                    
-                diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
-                predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
+            predictions_html = preds_sameline(grouped_predictions[ticker], current_val)
             
             # Replace the existing display logic with a call to display_predictions
             display_predictions(ticker, predictions_html)
@@ -120,21 +106,7 @@ def display_results(predictions):
                         current_close = latest_data['Close'].iloc[-1].item()  # Added .item()
                         
                         # Combine ticker header with predictions on same line
-                        predictions_html = ""
-                        for i, prediction in enumerate(grouped_next_day_predictions[ticker]):
-                            model_type = "Linear Regression" if i == 0 else "XGBoost"
-                            price_diff = prediction - current_close
-                            diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"
-                            
-                            if price_diff > 0:
-                                diff_sign = "+"
-                            elif price_diff < 0:
-                                diff_sign = "-"
-                            else:
-                                diff_sign = ""
-                                
-                            diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
-                            predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
+                        predictions_html = preds_sameline(grouped_next_day_predictions[ticker], current_close)
                         
                         # Replace the existing display logic with a call to display_predictions
                         display_predictions(ticker, predictions_html)

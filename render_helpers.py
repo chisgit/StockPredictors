@@ -40,6 +40,24 @@ def format_ticker_data(current_data, prev_data, volume):
     }
     return formatted_data
 
+def preds_sameline(predictions, current_val):
+    predictions_html = ''
+    for i, prediction in enumerate(predictions):
+        model_type = "Linear Regression" if i == 0 else "XGBoost"
+        price_diff = prediction - current_val
+        diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"
+        
+        if price_diff > 0:
+            diff_sign = "+"
+        elif price_diff < 0:
+            diff_sign = "-"
+        else:
+            diff_sign = ""
+            
+        diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
+        predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
+    return predictions_html
+
 def display_predictions(ticker, predictions_html):
     """Display predictions for a given ticker."""
     st.markdown(
