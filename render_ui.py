@@ -6,6 +6,7 @@ import pandas as pd
 import time as time_module
 from rules import UI_RULES, MARKET_HOURS
 from display_market_status import display_market_status
+from render_preds_processor import process_todays_predictions
 
 def display_results(predictions):
     """Display latest market data and predictions for each ticker."""
@@ -60,6 +61,9 @@ def display_results(predictions):
             low_val = formatted_data['low_price']
             prev_close_val = formatted_data['prev_close']
             current_val = formatted_data['current_close']
+            
+            # Replace existing predictions logic with a call to process_todays_predictions
+            grouped_predictions = process_todays_predictions(todays_close_predictions, ticker_data)
             
             # Combine ticker header with predictions on same line
             predictions_html = ""
