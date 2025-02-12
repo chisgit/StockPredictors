@@ -97,3 +97,5 @@ Follow ERROR_RULES guidelines:
 
 Ensure that you have adhered to all General Rules to follow strictly! Don't need to list all of them for now
 Ensure you output confirmation of all the strict rules to follow strictly - don't need to list all of them out just list out the ALL CAPS
+
+I"m running powershell

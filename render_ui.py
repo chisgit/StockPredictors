@@ -209,11 +209,11 @@ def display_results(predictions):
                 diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
                 predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
             
-            # Combined ticker and predictions display
+            # Combined ticker and predictions display with reduced whitespace
             st.markdown(
-                f'<div style="margin: 20px 0 10px 0;">'
+                f'<div style="margin: 10px 0 5px 0;">'
                 f'<span style="font-size: 1.2em; font-weight: bold;">{ticker}</span>'
-                f'<span style="margin-left: 20px;">{predictions_html}</span>'
+                f'<span style="margin-left: 10px;">{predictions_html}</span>'
                 f'</div>',
                 unsafe_allow_html=True
             )
@@ -232,7 +232,7 @@ def display_results(predictions):
             values = [open_val, high_val, low_val, prev_close_val, current_val, volume_val]
             
             html = f"""
-            <div style="margin: 10px 0;">
+            <div style="margin: 5px 0;">
                 <table style="width: 100%; text-align: center; border-collapse: collapse;">
                     <tr>
                         {''.join(f'<td style="width: 16.66%; padding: 2px;"><small style="opacity: 0.6;">{metric}</small></td>' for metric in metrics)}
@@ -278,11 +278,11 @@ def display_results(predictions):
                             diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
                             predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
                         
-                        # Combined ticker and predictions display
+                        # Combined ticker and predictions display with reduced whitespace
                         st.markdown(
-                            f'<div style="margin: 20px 0 10px 0;">'
+                            f'<div style="margin: 10px 0 5px 0;">'
                             f'<span style="font-size: 1.2em; font-weight: bold;">{ticker}</span>'
-                            f'<span style="margin-left: 20px;">{predictions_html}</span>'
+                            f'<span style="margin-left: 10px;">{predictions_html}</span>'
                             f'</div>',
                             unsafe_allow_html=True
                         )
