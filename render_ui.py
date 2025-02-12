@@ -1,11 +1,11 @@
 import streamlit as st
 from utils import get_nyse_datetime, market_status
+from render_helpers import get_recent_data, group_predictions_by_ticker
 import yfinance as yf
 import pandas as pd
 import time as time_module
 from rules import UI_RULES, MARKET_HOURS
 from display_market_status import display_market_status
-from render_helpers import group_predictions_by_ticker
 
 def display_results(predictions):
     """Display latest market data and predictions for each ticker."""
@@ -27,15 +27,14 @@ def display_results(predictions):
     for ticker in dict.fromkeys(t for t, _ in todays_close_predictions):
         try:
             # Download data once per ticker
-            try:
-                ticker_data[ticker] = yf.download(ticker, period='5d', interval='1d')
-                if len(ticker_data[ticker]) >= 2 and last_available_date is None:
-                    last_available_date = ticker_data[ticker].index[-1].date()
-                    display_market_status(last_available_date)
-                    st.subheader("Today's Close Predictions")
-            except Exception as e:
-                print(f"Error getting data for {ticker}: {str(e)}")
+            recent_data = get_recent_data(ticker)
+            if recent_data is None:
                 continue
+            ticker_data[ticker] = recent_data
+            if len(ticker_data[ticker]) >= 2 and last_available_date is None:
+                last_available_date = ticker_data[ticker].index[-1].date()
+                display_market_status(last_available_date)
+                st.subheader("Today's Close Predictions")
         except Exception as e:
             st.error(f"Error processing {ticker}: {str(e)}")
             continue
