@@ -134,36 +134,36 @@ def display_results(predictions):
     
     # Group predictions by ticker while preserving order
     grouped_predictions = {}
+    grouped_next_day_predictions = {}
+    ticker_data = {}  # Cache for storing downloaded data per ticker
+    
     for ticker, prediction in todays_close_predictions:
         if ticker not in grouped_predictions:
             grouped_predictions[ticker] = []
+            # Download data once per ticker
+            try:
+                ticker_data[ticker] = yf.download(ticker, period='5d', interval='1d')
+                if len(ticker_data[ticker]) >= 2 and last_available_date is None:
+                    last_available_date = ticker_data[ticker].index[-1].date()
+                    display_market_status(last_available_date)
+                    st.subheader("Today's Close Predictions")
+            except Exception as e:
+                print(f"Error getting data for {ticker}: {str(e)}")
+                continue
         grouped_predictions[ticker].append(prediction)
     
-    # Find the first valid ticker to get last_available_date and display market status
-    for ticker in grouped_predictions:
-        try:
-            latest_data = yf.download(ticker, period='5d', interval='1d')
-            if len(latest_data) >= 2:
-                last_available_date = latest_data.index[-1].date()
-                display_market_status(last_available_date)
-                st.subheader("Today's Close Predictions")  # Move header here
-                break
-        except Exception as e:
-            print(f"Error getting data for {ticker}: {str(e)}")
-            continue
+    for ticker, prediction in next_day_close_predictions:
+        if ticker not in grouped_next_day_predictions:
+            grouped_next_day_predictions[ticker] = []
+        grouped_next_day_predictions[ticker].append(prediction)
 
-    # Process each ticker once
-    for ticker in dict.fromkeys(t for t, _ in todays_close_predictions):  # Preserve original order
+    # Process each ticker once for today's close
+    for ticker in dict.fromkeys(t for t, _ in todays_close_predictions):
         try:
-            latest_data = yf.download(ticker, period='5d', interval='1d')
-            
-            if len(latest_data) < 2:
+            latest_data = ticker_data.get(ticker)
+            if latest_data is None or len(latest_data) < 2:
                 st.warning(f"Insufficient data available for {ticker}. Need at least 2 days of data to show previous close.")
                 continue
-            
-            if last_available_date is None:
-                last_available_date = latest_data.index[-1].date()
-                display_market_status(last_available_date)
             
             current_data = latest_data.iloc[-1]
             prev_data = latest_data.iloc[-2]
@@ -239,16 +239,43 @@ def display_results(predictions):
     if next_day_close_predictions:
         st.markdown("---")
         st.subheader("Next Day's Close Predictions")
-        for ticker, prediction in next_day_close_predictions:
-            if prediction is not None:
-                st.markdown(
-                    f'<div style="margin-bottom: 5px; font-size: 1.1em;">'
-                    f'{ticker} - Predicted Next Day Close: <span style="font-size: 1.15em;">${prediction:.2f}</span>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-            else:
-                st.warning(f"Could not generate next day prediction for {ticker}")
+        
+        # Process each ticker for next day predictions
+        for ticker in dict.fromkeys(t for t, _ in next_day_close_predictions):
+            if ticker in grouped_next_day_predictions and ticker in ticker_data:
+                try:
+                    latest_data = ticker_data[ticker]  # Use cached data
+                    if len(latest_data) >= 1:
+                        current_close = latest_data['Close'].iloc[-1]
+                        
+                        # Combine ticker header with predictions on same line
+                        predictions_html = ""
+                        for i, prediction in enumerate(grouped_next_day_predictions[ticker]):
+                            model_type = "Linear Regression" if i == 0 else "XGBoost"
+                            price_diff = prediction - current_close
+                            diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"
+                            
+                            if price_diff > 0:
+                                diff_sign = "+"
+                            elif price_diff < 0:
+                                diff_sign = "-"
+                            else:
+                                diff_sign = ""
+                                
+                            diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
+                            predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
+                        
+                        # Combined ticker and predictions display
+                        st.markdown(
+                            f'<div style="margin: 20px 0 10px 0;">'
+                            f'<span style="font-size: 1.2em; font-weight: bold;">{ticker}</span>'
+                            f'<span style="margin-left: 20px;">{predictions_html}</span>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
+                except Exception as e:
+                    st.error(f"Error processing next day predictions for {ticker}: {str(e)}")
+                    continue
 
 def update_selected_tickers(change):
     print(f"[UPDATE] Change: {change}")  # This is the key "stock_multiselect"
