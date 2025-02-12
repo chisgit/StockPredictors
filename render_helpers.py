@@ -1,4 +1,5 @@
 import yfinance as yf
+import streamlit as st
 
 def get_recent_data(ticker):
     """Download recent stock data for the given ticker."""
@@ -38,3 +39,13 @@ def format_ticker_data(current_data, prev_data, volume):
         'volume': int(volume)                                       # Return as int for calculations
     }
     return formatted_data
+
+def display_predictions(ticker, predictions_html):
+    """Display predictions for a given ticker."""
+    st.markdown(
+        f'<div style="margin: 10px 0 5px 0;">'
+        f'<span style="font-size: 1.2em; font-weight: bold;">{ticker}</span>'
+        f'<span style="margin-left: 10px;">{predictions_html}</span>'
+        f'</div>',
+        unsafe_allow_html=True
+    )

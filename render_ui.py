@@ -1,6 +1,6 @@
 import streamlit as st
 from utils import get_nyse_datetime, market_status
-from render_helpers import get_recent_data, group_predictions_by_ticker, format_ticker_data
+from render_helpers import get_recent_data, group_predictions_by_ticker, format_ticker_data, display_predictions
 import yfinance as yf
 import pandas as pd
 import time as time_module
@@ -78,14 +78,8 @@ def display_results(predictions):
                 diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
                 predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
             
-            # Combined ticker and predictions display with reduced whitespace
-            st.markdown(
-                f'<div style="margin: 10px 0 5px 0;">'
-                f'<span style="font-size: 1.2em; font-weight: bold;">{ticker}</span>'
-                f'<span style="margin-left: 10px;">{predictions_html}</span>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
+            # Replace the existing display logic with a call to display_predictions
+            display_predictions(ticker, predictions_html)
 
             # Create grid display
             metrics = ['Open', 'High', 'Low', 'Prev Close', 'Current Close', 'Volume']
@@ -138,14 +132,8 @@ def display_results(predictions):
                             diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
                             predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
                         
-                        # Combined ticker and predictions display with reduced whitespace
-                        st.markdown(
-                            f'<div style="margin: 10px 0 5px 0;">'
-                            f'<span style="font-size: 1.2em; font-weight: bold;">{ticker}</span>'
-                            f'<span style="margin-left: 10px;">{predictions_html}</span>'
-                            f'</div>',
-                            unsafe_allow_html=True
-                        )
+                        # Replace the existing display logic with a call to display_predictions
+                        display_predictions(ticker, predictions_html)
                 except Exception as e:
                     st.error(f"Error processing next day predictions for {ticker}: {str(e)}")
                     continue
