@@ -182,13 +182,13 @@ def display_results(predictions):
             # Display ticker header
             st.markdown(f'<div style="margin: 20px 0 10px 0; font-size: 1.2em; font-weight: bold;">{ticker}</div>', unsafe_allow_html=True)
             
-            # Display all predictions for this ticker
+            # Display both predictions on one line
+            predictions_html = ""
             for i, prediction in enumerate(grouped_predictions[ticker]):
                 model_type = "Linear Regression" if i == 0 else "XGBoost"
                 price_diff = prediction - current_close
                 diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"
                 
-                # Fix syntax error in this section
                 if price_diff > 0:
                     diff_sign = "+"
                 elif price_diff < 0:
@@ -197,13 +197,12 @@ def display_results(predictions):
                     diff_sign = ""
                     
                 diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
-                
-                st.markdown(
-                    f'<div style="margin-left: 20px; margin-bottom: 5px;">'
-                    f'{model_type} Prediction: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str}'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+                predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
+            
+            st.markdown(
+                f'<div style="margin-left: 20px; margin-bottom: 5px;">{predictions_html}</div>',
+                unsafe_allow_html=True
+            )
 
             # Format and display single grid
             open_val = f"${open_price:.2f}" if not pd.isna(open_price) else "N/A"
