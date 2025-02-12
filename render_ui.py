@@ -1,6 +1,6 @@
 import streamlit as st
 from utils import get_nyse_datetime, market_status
-from render_helpers import get_recent_data, group_predictions_by_ticker
+from render_helpers import get_recent_data, group_predictions_by_ticker, format_ticker_data
 import yfinance as yf
 import pandas as pd
 import time as time_module
@@ -49,30 +49,23 @@ def display_results(predictions):
             
             current_data = latest_data.iloc[-1]
             prev_data = latest_data.iloc[-2]
+
+            # Ensure that the volume is correctly extracted as a scalar
+            volume = current_data['Volume'].item()
+
+            # Call the formatting function with the correct parameters
+            formatted_data = format_ticker_data(current_data, prev_data, volume)
+            open_val = formatted_data['open_price']
+            high_val = formatted_data['high_price']
+            low_val = formatted_data['low_price']
+            prev_close_val = formatted_data['prev_close']
+            current_val = formatted_data['current_close']
             
-            try:
-                current_close = current_data['Close'].item()
-                prev_close = prev_data['Close'].item()
-                open_price = current_data['Open'].item()
-                high_price = current_data['High'].item()
-                low_price = current_data['Low'].item()
-                volume = current_data['Volume'].item()
-
-                # Format numbers according to UI rules
-                current_close = round(current_close, UI_RULES['price_decimals'])
-                prev_close = round(prev_close, UI_RULES['price_decimals'])
-                open_price = round(open_price, UI_RULES['price_decimals'])
-                high_price = round(high_price, UI_RULES['price_decimals'])
-                low_price = round(low_price, UI_RULES['price_decimals'])
-            except Exception as e:
-                st.error(f"Error extracting data for {ticker}: {str(e)}")
-                continue
-
             # Combine ticker header with predictions on same line
             predictions_html = ""
             for i, prediction in enumerate(grouped_predictions[ticker]):
                 model_type = "Linear Regression" if i == 0 else "XGBoost"
-                price_diff = prediction - current_close
+                price_diff = prediction - current_val
                 diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"
                 
                 if price_diff > 0:
@@ -94,18 +87,9 @@ def display_results(predictions):
                 unsafe_allow_html=True
             )
 
-            # Format and display single grid
-            open_val = f"${open_price:.2f}" if not pd.isna(open_price) else "N/A"
-            high_val = f"${high_price:.2f}" if not pd.isna(high_price) else "N/A"
-            low_val = f"${low_price:.2f}" if not pd.isna(low_price) else "N/A"
-            prev_close_val = f"${prev_close:.2f}" if not pd.isna(prev_close) else "N/A"
-            current_val = f"${current_data['Close'].item():.2f}" if market_status() == "MARKET_OPEN" else (f"${current_close:.2f}" if not pd.isna(current_close) else "N/A")
-            volume_val = f"{int(volume):,}" if not pd.isna(volume) else "N/A"
-            
             # Create grid display
-            current_label = "Last Traded" if market_status() == "MARKET_OPEN" else "Close"
-            metrics = ['Open', 'High', 'Low', 'Prev Close', current_label, 'Volume']
-            values = [open_val, high_val, low_val, prev_close_val, current_val, volume_val]
+            metrics = ['Open', 'High', 'Low', 'Prev Close', 'Current Close', 'Volume']
+            values = [open_val, high_val, low_val, prev_close_val, current_val, f"{int(volume):,}"]
             
             html = f"""
             <div style="margin: 5px 0;">

@@ -26,3 +26,15 @@ def group_predictions_by_ticker(todays_close_predictions, next_day_close_predict
         grouped_next_day_predictions[ticker].append(prediction)
 
     return grouped_predictions, grouped_next_day_predictions
+
+def format_ticker_data(current_data, prev_data, volume):
+    """Format the ticker data for display."""
+    formatted_data = {
+        'current_close': round(current_data['Close'].item(), 2),  # Round to 2 decimals
+        'prev_close': round(prev_data['Close'].item(), 2),        # Round to 2 decimals
+        'open_price': round(current_data['Open'].item(), 2),      # Round to 2 decimals
+        'high_price': round(current_data['High'].item(), 2),      # Round to 2 decimals
+        'low_price': round(current_data['Low'].item(), 2),        # Round to 2 decimals
+        'volume': int(volume)                                       # Return as int for calculations
+    }
+    return formatted_data
