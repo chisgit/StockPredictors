@@ -131,29 +131,47 @@ def add_technical_indicators(df, ticker_value):
     
     return df
 
-def get_feature_columns(model_type="linear_regression"):
+def get_feature_columns(model_type="linear_regression", target="today"):
     """
     Get feature columns based on model type. Each model type has its own 
     predefined set of features that work best for that particular model.
     
     Args:
         model_type (str): Type of model ("linear_regression" or "xgboost")
+        target (str): Prediction target ("today" or "next_day")
     
     Returns:
         list: List of feature column names for the specified model type
     """
     if model_type == "linear_regression":
-        # Linear regression uses simple features - less prone to overfitting
-        return ['Open', 'High', 'Low', 'Prev Close', 'Volume']
+        if target == "today":
+            # Linear regression uses simple features - less prone to overfitting
+            return ['Open', 'High', 'Low', 'Prev Close', 'Volume']
+        elif target == "next_day":
+            return ['Open', 'High', 'Low', 'Prev Close', 'Close', 'Volume']
+        else:
+            raise ValueError(f"Unsupported target: {target}")
     
     elif model_type == "xgboost":
-        # XGBoost can handle more complex features
-        return ['Open', 'High', 'Low', 'Close', 'Prev Close', 'Volume',
-                'RSI', 'BB_Upper', 'BB_Lower', 'ATR',
-                'MACD', 'MACD_Signal', 'MACD_Hist',
-                'Price_Change', 'Returns', 'HL_Range', 'HL_Range_Pct',
+        base_features = [
+            'Open', 'High', 'Low', 'Volume',
+            'RSI', 'BB_Upper', 'BB_Lower', 'ATR',
+            'MACD', 'MACD_Signal', 'MACD_Hist',
+            'Price_Change', 'Returns', 'HL_Range', 'HL_Range_Pct'
+        ]
+        
+        if target == "today":
+            return base_features + [
+                'Prev Close',
                 'Close_Lag_1', 'Close_Lag_2',
-                'Volume_Lag_1', 'Volume_Lag_2']
+                'Volume_Lag_1', 'Volume_Lag_2'
+            ]
+        else:  # next_day
+            return base_features + [
+                'Close',  # Include today's close for next day prediction
+                'Close_Lag_1', 'Close_Lag_2',
+                'Volume_Lag_1', 'Volume_Lag_2'
+            ]
     
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
