@@ -179,10 +179,7 @@ def display_results(predictions):
                 st.error(f"Error extracting data for {ticker}: {str(e)}")
                 continue
 
-            # Display ticker header
-            st.markdown(f'<div style="margin: 20px 0 10px 0; font-size: 1.2em; font-weight: bold;">{ticker}</div>', unsafe_allow_html=True)
-            
-            # Display both predictions on one line
+            # Combine ticker header with predictions on same line
             predictions_html = ""
             for i, prediction in enumerate(grouped_predictions[ticker]):
                 model_type = "Linear Regression" if i == 0 else "XGBoost"
@@ -199,8 +196,12 @@ def display_results(predictions):
                 diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
                 predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
             
+            # Combined ticker and predictions display
             st.markdown(
-                f'<div style="margin-left: 20px; margin-bottom: 5px;">{predictions_html}</div>',
+                f'<div style="margin: 20px 0 10px 0;">'
+                f'<span style="font-size: 1.2em; font-weight: bold;">{ticker}</span>'
+                f'<span style="margin-left: 20px;">{predictions_html}</span>'
+                f'</div>',
                 unsafe_allow_html=True
             )
 
