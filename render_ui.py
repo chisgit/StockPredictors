@@ -4,8 +4,7 @@ import yfinance as yf
 import pandas as pd
 import time as time_module
 from rules import UI_RULES, MARKET_HOURS
-from ui_helpers import generate_market_status_header, generate_market_status_message
-from market_status_helpers import display_market_status
+from display_market_status import display_market_status
 
 
 def display_results(predictions):
