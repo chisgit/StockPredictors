@@ -4,6 +4,7 @@ import yfinance as yf
 import pandas as pd
 import time as time_module     
 
+
 def generate_market_status_header(date_str):
     """Generate the header with the current date."""
     return f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>"
@@ -124,16 +125,10 @@ def display_market_status(last_available_date=None):
     st.markdown("---")  # Add a separator line
 
 def display_results(predictions):
-    """
-    Display latest market data and predictions for each ticker.
-    Args:
-        predictions: List containing [todays_close_predictions, next_day_close_predictions]
-    """
+    """Display latest market data and predictions for each ticker."""
     last_available_date = None
     todays_close_predictions = predictions[0]
     next_day_close_predictions = predictions[1]
-    
-    st.subheader("Today's Close Predictions")
     
     print(f"Today's Close and Next_Day Predictions: {predictions}")
     
@@ -144,6 +139,19 @@ def display_results(predictions):
             grouped_predictions[ticker] = []
         grouped_predictions[ticker].append(prediction)
     
+    # Find the first valid ticker to get last_available_date and display market status
+    for ticker in grouped_predictions:
+        try:
+            latest_data = yf.download(ticker, period='5d', interval='1d')
+            if len(latest_data) >= 2:
+                last_available_date = latest_data.index[-1].date()
+                display_market_status(last_available_date)
+                st.subheader("Today's Close Predictions")  # Move header here
+                break
+        except Exception as e:
+            print(f"Error getting data for {ticker}: {str(e)}")
+            continue
+
     # Process each ticker once
     for ticker in dict.fromkeys(t for t, _ in todays_close_predictions):  # Preserve original order
         try:
