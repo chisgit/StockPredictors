@@ -58,22 +58,14 @@ def display_results(predictions):
             if formatted_data is None:
                 continue
 
-            # Extract values from formatted_data
-            open_val = dict(formatted_data)['Open']
-            high_val = dict(formatted_data)['High']
-            low_val = dict(formatted_data)['Low']
-            prev_close_val = dict(formatted_data)['Prev Close']
-            current_val = dict(formatted_data)['Current Close']
-            volume = dict(formatted_data)['Volume']
-
             # Combine ticker header with predictions on same line
-            predictions_html = preds_sameline(grouped_predictions[ticker], current_val)
+            predictions_html = preds_sameline(grouped_predictions[ticker], formatted_data['Current Close'])
             
             # Replace the existing display logic with a call to display_predictions
             display_predictions(ticker, predictions_html)
 
             # Create grid display
-            grid_html = create_grid_display(open_val, high_val, low_val, prev_close_val, current_val, volume)
+            grid_html = create_grid_display(formatted_data['Open'], formatted_data['High'], formatted_data['Low'], formatted_data['Prev Close'], formatted_data['Current Close'], formatted_data['Volume'])
             st.markdown(grid_html, unsafe_allow_html=True)
         except Exception as e:
             st.error(f"Error processing {ticker}: {str(e)}")

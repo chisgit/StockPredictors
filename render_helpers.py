@@ -39,15 +39,15 @@ def extract_and_format_ticker_data(latest_data):
     # Ensure that the volume is correctly extracted as a scalar
     volume = current_data['Volume'].item()
 
-    # Prepare formatted data as a list of tuples (label, value)
-    formatted_data = [
-        ('Open', round(current_data['Open'].item(), 2)),
-        ('High', round(current_data['High'].item(), 2)),
-        ('Low', round(current_data['Low'].item(), 2)),
-        ('Prev Close', round(prev_data['Close'].item(), 2)),
-        ('Current Close', round(current_data['Close'].item(), 2)),
-        ('Volume', int(volume))
-    ]
+    # Prepare formatted data as a dictionary
+    formatted_data = {
+        'Open': round(current_data['Open'].item(), 2),
+        'High': round(current_data['High'].item(), 2),
+        'Low': round(current_data['Low'].item(), 2),
+        'Prev Close': round(prev_data['Close'].item(), 2),
+        'Current Close': round(current_data['Close'].item(), 2),
+        'Volume': int(volume)
+    }
     return formatted_data
 
 def preds_sameline(predictions, current_val):
