@@ -1,6 +1,6 @@
 import streamlit as st
 from utils import get_nyse_datetime, market_status
-from render_helpers import get_recent_data, group_predictions_by_ticker, format_ticker_data, display_predictions, preds_sameline
+from render_helpers import get_recent_data, group_predictions_by_ticker, format_ticker_data, display_predictions, preds_sameline, create_grid_display, search_and_add_ticker
 import yfinance as yf
 import pandas as pd
 import time as time_module
@@ -8,12 +8,14 @@ from rules import UI_RULES, MARKET_HOURS
 from display_market_status import display_market_status
 from render_preds_processor import process_todays_predictions
 
+def enforce_max_tickers():
+    if len(st.session_state.selected_tickers) > UI_RULES['max_tickers']:
+        st.warning(f"Maximum {UI_RULES['max_tickers']} tickers can be selected at once.")
+        st.session_state.selected_tickers = st.session_state.selected_tickers[:UI_RULES['max_tickers']]
+
 def display_results(predictions):
     """Display latest market data and predictions for each ticker."""
-    # Enforce maximum tickers rule
-    if len(st.session_state.selected_tickers) > UI_RULES['max_tickers']:
-        st.warning(f"Maximum {UI_RULES['max_tickers']} tickers can be selected at once. Only showing first {UI_RULES['max_tickers']} tickers.")
-        st.session_state.selected_tickers = st.session_state.selected_tickers[:UI_RULES['max_tickers']]
+    enforce_max_tickers()
     
     last_available_date = None
     todays_close_predictions = predictions[0]
@@ -72,22 +74,8 @@ def display_results(predictions):
             display_predictions(ticker, predictions_html)
 
             # Create grid display
-            metrics = ['Open', 'High', 'Low', 'Prev Close', 'Current Close', 'Volume']
-            values = [open_val, high_val, low_val, prev_close_val, current_val, f"{int(volume):,}"]
-            
-            html = f"""
-            <div style="margin: 5px 0;">
-                <table style="width: 100%; text-align: center; border-collapse: collapse;">
-                    <tr>
-                        {''.join(f'<td style="width: 16.66%; padding: 2px;"><small style="opacity: 0.6;">{metric}</small></td>' for metric in metrics)}
-                    </tr>
-                    <tr>
-                        {''.join(f'<td style="width: 16.66%; padding: 2px;"><span style="font-size: 1.1em; opacity: 0.8;">{value}</span></td>' for value in values)}
-                    </tr>
-                </table>
-            </div>
-            """
-            st.markdown(html, unsafe_allow_html=True)
+            grid_html = create_grid_display(open_val, high_val, low_val, prev_close_val, current_val, volume)
+            st.markdown(grid_html, unsafe_allow_html=True)
         except Exception as e:
             st.error(f"Error processing {ticker}: {str(e)}")
             continue
@@ -161,22 +149,7 @@ def render_ui():
         st.session_state.new_ticker = new_ticker
 
     if new_ticker:
-        try:
-            stock_data = yf.download(new_ticker, period='1d')
-            if stock_data.empty:
-                st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
-            else:
-                new_ticker_upper = new_ticker.upper()
-                if new_ticker_upper not in [t.upper() for t in st.session_state.tickers]:
-                    st.session_state.tickers.insert(0, new_ticker_upper)
-                    st.session_state.selected_tickers.append(new_ticker_upper)
-                    st.rerun()
-                else:
-                    if new_ticker_upper not in [t.upper() for t in st.session_state.selected_tickers]:
-                        st.session_state.selected_tickers.append(new_ticker_upper)
-                        st.rerun()
-        except Exception as e:
-            st.error(f"Error: {e}")
+        search_and_add_ticker(new_ticker)
     st.session_state.new_ticker = ''
 
     # Create two distinct containers

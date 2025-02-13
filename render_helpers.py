@@ -67,3 +67,45 @@ def display_predictions(ticker, predictions_html):
         f'</div>',
         unsafe_allow_html=True
     )
+
+def create_grid_display(open_val, high_val, low_val, prev_close_val, current_val, volume):
+    metrics = ['Open', 'High', 'Low', 'Prev Close', 'Current Close', 'Volume']
+    values = [open_val, high_val, low_val, prev_close_val, current_val, f"{int(volume):,}"]
+    
+    html = f"""
+    <div style="margin: 5px 0;">
+        <table style="width: 100%; text-align: center; border-collapse: collapse;">
+            <tr>
+                {''.join(f'<td style="width: 16.66%; padding: 2px;"><small style="opacity: 0.6;">{metric}</small></td>' for metric in metrics)}
+            </tr>
+            <tr>
+                {''.join(f'<td style="width: 16.66%; padding: 2px;"><span style="font-size: 1.1em; opacity: 0.8;">{value}</span></td>' for value in values)}
+            </tr>
+        </table>
+    </div>
+    """
+    return html
+
+def search_and_add_ticker(new_ticker):
+    # Clears out the ticker if there's a change in removing the ticker
+    # This way it doesn't keep appearing in the search bar after it's been removed
+    if new_ticker != st.session_state.new_ticker:
+        st.session_state.new_ticker = new_ticker
+
+    if new_ticker:
+        try:
+            stock_data = yf.download(new_ticker, period='1d')
+            if stock_data.empty:
+                st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
+            else:
+                new_ticker_upper = new_ticker.upper()
+                if new_ticker_upper not in [t.upper() for t in st.session_state.tickers]:
+                    st.session_state.tickers.insert(0, new_ticker_upper)
+                    st.session_state.selected_tickers.append(new_ticker_upper)
+                    st.rerun()
+                else:
+                    if new_ticker_upper not in [t.upper() for t in st.session_state.selected_tickers]:
+                        st.session_state.selected_tickers.append(new_ticker_upper)
+                        st.rerun()
+        except Exception as e:
+            st.error(f"Error: {e}")
