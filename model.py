@@ -53,6 +53,14 @@ def train_model(
     y_scaled = y_scaler.fit_transform(y.values.reshape(-1, 1))
     y_scaled = pd.Series(y_scaled.flatten(), index=y.index)
 
+    # Split data into train, validation, and test sets
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X_scaled, y_scaled, test_size=0.2, random_state=42
+    )
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, test_size=0.5, random_state=42
+    )
+
     # Use TimeSeriesSplit for validation
     tscv = TimeSeriesSplit(n_splits=5)
     cv_scores = []
@@ -61,18 +69,21 @@ def train_model(
         model = LinearRegression()
 
         # Cross validation
-        for train_idx, val_idx in tscv.split(X_scaled):
-            X_train = X_scaled.iloc[train_idx]
-            X_test = X_scaled.iloc[val_idx]
-            y_train = y_scaled.iloc[train_idx]
-            y_test = y_scaled.iloc[val_idx]
+        for train_idx, val_idx in tscv.split(X_train):
+            X_train_fold = X_train.iloc[train_idx]
+            X_val_fold = X_train.iloc[val_idx]
+            y_train_fold = y_train.iloc[train_idx]
+            y_val_fold = y_train.iloc[val_idx]
 
-            model.fit(X_train, y_train)
-            score = model.score(X_test, y_test)
+            model.fit(X_train_fold, y_train_fold)
+            score = model.score(X_val_fold, y_val_fold)
             cv_scores.append(score)
 
         print(f"\nLinear Regression CV Scores: {cv_scores}")
         print(f"Mean CV Score: {np.mean(cv_scores)}")
+
+        # Train on full train set
+        model.fit(X_train, y_train)
 
     elif model_type == "xgboost":
         model = xgb.XGBRegressor(
@@ -87,13 +98,6 @@ def train_model(
             eval_metric="rmse",
             early_stopping_rounds=10,
         )
-
-        # Split data for final training
-        train_size = int(len(X_scaled) * 0.8)
-        X_train = X_scaled.iloc[:train_size]
-        X_val = X_scaled.iloc[train_size:]
-        y_train = y_scaled.iloc[:train_size]
-        y_val = y_scaled.iloc[train_size:]
 
         # Train with validation
         model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
