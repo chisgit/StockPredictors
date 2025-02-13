@@ -39,7 +39,7 @@ def display_results(predictions):
                 display_market_status(last_available_date)
                 st.subheader("Today's Close Predictions")
         except Exception as e:
-            st.error(f"Error processing {ticker}: {str(e)}")
+            st.error(f"Error in the downloading of current data for {ticker}: {str(e)}")
             continue
 
     # Process each ticker once for today's close
@@ -64,9 +64,6 @@ def display_results(predictions):
             prev_close_val = formatted_data['prev_close']
             current_val = formatted_data['current_close']
             
-            # Replace existing predictions logic with a call to process_todays_predictions
-            grouped_predictions = process_todays_predictions(todays_close_predictions, ticker_data)
-            
             # Combine ticker header with predictions on same line
             predictions_html = preds_sameline(grouped_predictions[ticker], current_val)
             
@@ -85,18 +82,18 @@ def display_results(predictions):
         st.markdown("---")
         st.subheader("Next Day's Close Predictions")
         
-        # Process each ticker for next day predictions
+        # Process each ticker for next day's predictions
         for ticker in dict.fromkeys(t for t, _ in next_day_close_predictions):
             if ticker in grouped_next_day_predictions and ticker in ticker_data:
                 try:
                     latest_data = ticker_data[ticker]  # Use cached data
-                    if not latest_data.empty and len(latest_data) >= 1:  # Fixed condition
+                    if not latest_data.empty and len(latest_data) >= 1:
                         current_close = latest_data['Close'].iloc[-1].item()  # Added .item()
                         
-                        # Combine ticker header with predictions on same line
+                        # Use preds_sameline to format the predictions
                         predictions_html = preds_sameline(grouped_next_day_predictions[ticker], current_close)
                         
-                        # Replace the existing display logic with a call to display_predictions
+                        # Display the predictions
                         display_predictions(ticker, predictions_html)
                 except Exception as e:
                     st.error(f"Error processing next day predictions for {ticker}: {str(e)}")
