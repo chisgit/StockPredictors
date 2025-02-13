@@ -10,6 +10,7 @@ from render_helpers import (
 )
 from rules import UI_RULES
 from display_market_status import display_market_status
+from utils import market_status
 
 
 def enforce_max_tickers():
@@ -77,19 +78,19 @@ def display_results(predictions):
 
             # Combine ticker header with predictions on same line
             predictions_html = preds_sameline(
-                grouped_predictions[ticker], formatted_data["Current Close"]
+                grouped_predictions[ticker], formatted_data["Close"]
             )
 
             # Replace the existing display logic with a call to display_predictions
             display_predictions(ticker, predictions_html)
 
-            # Create grid display
+            # Create grid display with appropriate close value based on market status
             grid_html = create_grid_display(
                 formatted_data["Open"],
                 formatted_data["High"],
                 formatted_data["Low"],
                 formatted_data["Prev Close"],
-                formatted_data["Current Close"],
+                formatted_data["Close"],
                 formatted_data["Volume"],
             )
             st.markdown(grid_html, unsafe_allow_html=True)
