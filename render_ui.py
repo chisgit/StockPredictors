@@ -27,8 +27,9 @@ def display_results(predictions):
     grouped_predictions, grouped_next_day_predictions = group_predictions_by_ticker(todays_close_predictions, next_day_close_predictions)
     ticker_data = {}  # Cache for storing downloaded data per ticker
     
-    for ticker in dict.fromkeys(t for t, _ in todays_close_predictions):
+    for ticker, predictions in grouped_predictions.items():
         try:
+            # Use the predictions for display
             # Download data once per ticker
             recent_data = get_recent_data(ticker)
             if recent_data is None:
