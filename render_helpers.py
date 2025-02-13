@@ -28,16 +28,26 @@ def group_predictions_by_ticker(todays_close_predictions, next_day_close_predict
 
     return grouped_predictions, grouped_next_day_predictions
 
-def format_ticker_data(current_data, prev_data, volume):
-    """Format the ticker data for display."""
-    formatted_data = {
-        'current_close': round(current_data['Close'].item(), 2),  # Round to 2 decimals
-        'prev_close': round(prev_data['Close'].item(), 2),        # Round to 2 decimals
-        'open_price': round(current_data['Open'].item(), 2),      # Round to 2 decimals
-        'high_price': round(current_data['High'].item(), 2),      # Round to 2 decimals
-        'low_price': round(current_data['Low'].item(), 2),        # Round to 2 decimals
-        'volume': int(volume)                                       # Return as int for calculations
-    }
+def extract_and_format_ticker_data(latest_data):
+    """Extract and format ticker data from the latest data."""
+    if latest_data is None or len(latest_data) < 2:
+        return None  # Or handle error as needed
+
+    current_data = latest_data.iloc[-1]
+    prev_data = latest_data.iloc[-2]
+
+    # Ensure that the volume is correctly extracted as a scalar
+    volume = current_data['Volume'].item()
+
+    # Prepare formatted data as a list of tuples (label, value)
+    formatted_data = [
+        ('Open', round(current_data['Open'].item(), 2)),
+        ('High', round(current_data['High'].item(), 2)),
+        ('Low', round(current_data['Low'].item(), 2)),
+        ('Prev Close', round(prev_data['Close'].item(), 2)),
+        ('Current Close', round(current_data['Close'].item(), 2)),
+        ('Volume', int(volume))
+    ]
     return formatted_data
 
 def preds_sameline(predictions, current_val):

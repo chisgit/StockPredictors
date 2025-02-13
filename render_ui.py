@@ -1,6 +1,6 @@
 import streamlit as st
 from utils import get_nyse_datetime, market_status
-from render_helpers import get_recent_data, group_predictions_by_ticker, format_ticker_data, display_predictions, preds_sameline, create_grid_display, search_and_add_ticker
+from render_helpers import get_recent_data, group_predictions_by_ticker, extract_and_format_ticker_data, display_predictions, preds_sameline, create_grid_display, search_and_add_ticker
 import yfinance as yf
 import pandas as pd
 import time as time_module
@@ -53,17 +53,19 @@ def display_results(predictions):
             current_data = latest_data.iloc[-1]
             prev_data = latest_data.iloc[-2]
 
-            # Ensure that the volume is correctly extracted as a scalar
-            volume = current_data['Volume'].item()
+            # Extract and format ticker data
+            formatted_data = extract_and_format_ticker_data(latest_data)
+            if formatted_data is None:
+                continue
 
-            # Call the formatting function with the correct parameters
-            formatted_data = format_ticker_data(current_data, prev_data, volume)
-            open_val = formatted_data['open_price']
-            high_val = formatted_data['high_price']
-            low_val = formatted_data['low_price']
-            prev_close_val = formatted_data['prev_close']
-            current_val = formatted_data['current_close']
-            
+            # Extract values from formatted_data
+            open_val = dict(formatted_data)['Open']
+            high_val = dict(formatted_data)['High']
+            low_val = dict(formatted_data)['Low']
+            prev_close_val = dict(formatted_data)['Prev Close']
+            current_val = dict(formatted_data)['Current Close']
+            volume = dict(formatted_data)['Volume']
+
             # Combine ticker header with predictions on same line
             predictions_html = preds_sameline(grouped_predictions[ticker], current_val)
             
