@@ -128,8 +128,8 @@ def search_and_add_ticker(new_ticker):
 
     if new_ticker:
         try:
-            stock_data = yf.download(new_ticker, period="1d")
-            if stock_data.empty:
+            stock_data = get_recent_data(new_ticker)
+            if stock_data is None or stock_data.empty:
                 st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
             else:
                 new_ticker_upper = new_ticker.upper()
