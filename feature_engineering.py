@@ -121,6 +121,18 @@ def add_price_derivatives(df, ticker_value):
     return df
 
 
+def add_interaction_features(df, ticker_value):
+    """Calculate interaction features between price and volume."""
+    # Price-Volume interactions
+    df[('PriceVolume', ticker_value)] = df[('Close', ticker_value)] * df[('Volume', ticker_value)]
+    df[('LogPriceVolume', ticker_value)] = np.log1p(df[('Close', ticker_value)]) * np.log1p(df[('Volume', ticker_value)])
+    
+    # High-Low-Volume interaction
+    df[('RangeVolume', ticker_value)] = df[('HL_Range', ticker_value)] * df[('Volume', ticker_value)]
+    
+    return df
+
+
 def add_technical_indicators(df, ticker_value):
     """Add technical indicators to the DataFrame"""
     print(f"\n=== Starting Technical Indicators for {ticker_value} ===")
@@ -136,6 +148,7 @@ def add_technical_indicators(df, ticker_value):
     df = add_volatility_indicators(df, ticker_value)
     df = add_trend_indicators(df, ticker_value)
     df = add_price_derivatives(df, ticker_value)
+    df = add_interaction_features(df, ticker_value)  # Add new interaction features
     df = add_lagged_features(df, ticker_value)
 
     # Handle all NaNs at once after all calculations are done
@@ -186,6 +199,9 @@ def get_feature_columns(model_type="linear_regression", target="today"):
             "Returns",
             "HL_Range",
             "HL_Range_Pct",
+            "PriceVolume",
+            "LogPriceVolume",
+            "RangeVolume",
         ]
 
         if target == "today":

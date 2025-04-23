@@ -87,19 +87,21 @@ def train_model(
 
     elif model_type == "xgboost":
         model = xgb.XGBRegressor(
-            n_estimators=500,  # Increased for better convergence
-            learning_rate=0.05,  # Increased to capture stronger feature relationships
-            max_depth=5,  # Slightly increased for more complex patterns
-            min_child_weight=3,  # Balanced to prevent underfitting
-            subsample=0.8,  # Maintain good sampling ratio
-            colsample_bytree=0.8,  # Keep feature sampling ratio
+            n_estimators=2000,  # Doubled for even finer convergence
+            learning_rate=0.01,  # Further reduced for precision
+            max_depth=3,  # Reduced complexity
+            min_child_weight=5,  # More aggressive pattern filtering
+            subsample=0.95,  # Increased sampling
+            colsample_bytree=0.95,  # Increased feature sampling
             objective="reg:squarederror",
             random_state=42,
             eval_metric="rmse",
-            early_stopping_rounds=20,  # Increased patience
-            gamma=0.1,  # Light regularization
-            reg_alpha=0.1,  # L1 regularization
-            reg_lambda=0.2,  # L2 regularization
+            early_stopping_rounds=50,  # Increased patience significantly
+            gamma=0.01,  # Minimal regularization
+            reg_alpha=0.01,  # Minimal L1 regularization
+            reg_lambda=0.05,  # Reduced L2 regularization
+            max_leaves=16,  # Reduced tree complexity
+            tree_method='hist'  # Faster, more accurate method
         )
 
         # Train with validation
