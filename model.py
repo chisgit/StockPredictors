@@ -87,26 +87,41 @@ def train_model(
 
     elif model_type == "xgboost":
         model = xgb.XGBRegressor(
-            n_estimators=100,
-            learning_rate=0.03,
-            max_depth=4,
-            min_child_weight=2,
-            subsample=0.8,
-            colsample_bytree=0.8,
+            n_estimators=500,  # Increased for better convergence
+            learning_rate=0.05,  # Increased to capture stronger feature relationships
+            max_depth=5,  # Slightly increased for more complex patterns
+            min_child_weight=3,  # Balanced to prevent underfitting
+            subsample=0.8,  # Maintain good sampling ratio
+            colsample_bytree=0.8,  # Keep feature sampling ratio
             objective="reg:squarederror",
             random_state=42,
             eval_metric="rmse",
-            early_stopping_rounds=10,
+            early_stopping_rounds=20,  # Increased patience
+            gamma=0.1,  # Light regularization
+            reg_alpha=0.1,  # L1 regularization
+            reg_lambda=0.2,  # L2 regularization
         )
 
         # Train with validation
         model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
 
-        # Print feature importance
+        # Print feature importance with threshold
         importance = pd.DataFrame(
             {"feature": feature_cols, "importance": model.feature_importances_}
         ).sort_values("importance", ascending=False)
-        print(f"\nFeature importance for {current_ticker}:")
+        
+        # Filter features by importance threshold
+        importance_threshold = 0.00001
+        significant_features = importance[importance["importance"] > importance_threshold]
+        
+        print(f"\nFeature importance for {current_ticker} (threshold > {importance_threshold}):")
+        if not significant_features.empty:
+            print(significant_features.head())
+        else:
+            print("No features above importance threshold")
+            
+        # Print lowest importance features for debugging
+        print("\nLowest importance features:")
         print(importance.tail())
 
     return model, (X_scaler, y_scaler)
