@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": ".venv\\Scripts\\python.exe",
+    "python.pythonPath": "venv\\Scripts\\python.exe",
     "python.terminal.activateEnvInCurrentTerminal": true,
     "terminal.integrated.profiles.windows": {
       "PowerShell": {
@@ -7,7 +7,7 @@
         "args": [
           "-NoExit",
           "-Command",
-          ". '${workspaceFolder}\\.venv\\Scripts\\Activate.ps1'"
+          ". '${workspaceFolder}\\venv\\Scripts\\Activate.ps1'"
         ]
       },
       "Command Prompt": {
