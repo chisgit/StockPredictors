@@ -10,8 +10,8 @@ from render_helpers import (
     search_and_add_ticker,
 )
 from rules import UI_RULES
-from display_market_status import display_market_status
-from utils import market_status
+from display_market_status import display_market_status, generate_next_day_header
+from utils import market_status, next_trading_day
 
 
 def enforce_max_tickers():
@@ -55,7 +55,6 @@ def display_results(predictions):
             if len(ticker_data[ticker]) >= 2 and last_available_date is None:
                 last_available_date = ticker_data[ticker].index[-1].date()
                 display_market_status(last_available_date)
-                st.subheader("Today's Close Predictions")
 
         except Exception as e:
             st.error(f"Error in the downloading of current data for {ticker}: {str(e)}")
@@ -106,7 +105,13 @@ def display_results(predictions):
     # Display next day predictions if available
     if next_day_close_predictions:
         st.markdown("---")
-        st.subheader("Next Day's Close Predictions")
+        # Forward section: label with the concrete next trading session (the
+        # session after the last completed one). Before the bell this is today.
+        if last_available_date is not None:
+            next_session = next_trading_day(last_available_date)
+            st.subheader(generate_next_day_header(next_session.strftime('%A, %B %d')))
+        else:
+            st.subheader(generate_next_day_header("the next session"))
 
         # Process each ticker for next day's predictions
         for ticker, predictions in grouped_next_day_predictions.items():

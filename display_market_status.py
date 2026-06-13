@@ -1,58 +1,77 @@
 import streamlit as st
-from utils import get_nyse_datetime, market_status
+from utils import market_status, is_trading_day, get_nyse_date
 
-def generate_market_status_header(date_str):
-    """Generate the header with the current date."""
-    return f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>"
 
-def generate_market_status_message(status, last_date_str, time_str):
-    """Generate the market status message based on the current market status."""
-    status_messages = {
-        "BEFORE_MARKET_OPEN": {
-            "icon": "⏳",
-            "title": "Market hasn't opened yet",
-            "subtitle": f"Predicted closing prices are for {last_date_str} based on the latest available data"
-        },
-        "MARKET_OPEN": {
-            "icon": "🔔",
-            "title": "Market is Open",
-            "subtitle": f"Predicted closing price for {last_date_str} based on current time: {time_str}"
-        },
-        "AFTER_MARKET_CLOSE": {
-            "icon": "🔴",
-            "title": "Market is Closed",
-            "subtitle": f"Predicted closing price for {last_date_str}. Today's closing prices are final."
-        }
-    }
-    
-    # Raise an error if the status is not found, which helps catch potential issues
-    if status not in status_messages:
+def generate_market_status_header(status, last_date_str, today_is_trading_day=True):
+    """Single status-driven header (icon + title, left-aligned).
+
+    The title carries everything inline (no separate subtitle). `last_date_str`
+    is the last completed session's date (data.index[-1]).
+
+    Title by state:
+      - BEFORE_MARKET_OPEN (trading day, pre-bell):
+            "Market Closed - Displaying Predictions for <last traded date>"
+      - MARKET_OPEN:
+            "Live — Last Traded"
+      - AFTER_MARKET_CLOSE on a trading day (today's close is final):
+            "Today's Close Predictions and Actuals"
+      - AFTER_MARKET_CLOSE on a weekend/holiday (today never traded):
+            "Market Closed Weekend/Holiday - Displaying Predictions for
+             <last traded date>"
+
+    `today_is_trading_day` only matters for AFTER_MARKET_CLOSE — it splits the
+    trading-day-after-close case from the weekend/holiday case, which
+    market_status() collapses into one status.
+    """
+    if status == "MARKET_OPEN":
+        icon, title = "🔔", "Live — Last Traded"
+    elif status == "BEFORE_MARKET_OPEN":
+        icon = "🔴"
+        title = f"Market Closed - Displaying Predictions for {last_date_str}"
+    elif status == "AFTER_MARKET_CLOSE":
+        icon = "🔴"
+        if today_is_trading_day:
+            title = "Today's Close Predictions and Actuals"
+        else:
+            title = (
+                "Market Closed Weekend/Holiday - Displaying Predictions for "
+                f"{last_date_str}"
+            )
+    else:
         raise ValueError(f"Unknown market status: {status}")
-    
-    message = status_messages[status]
-    
-    return f"""<div style='text-align: center; margin-top: -10px;'>
-        <h3 style='margin-bottom: 0;'>{message['icon']} {message['title']}</h3>
-        <div style='font-size: 10pt; margin-top: -10px;'>{message['subtitle']}</div>
-    </div>"""
 
-def display_market_status(last_available_date=None):
+    return (
+        "<div style='text-align: left; margin-bottom: 8px;'>"
+        f"<h3 style='margin: 0;'>{icon} {title}</h3>"
+        "</div>"
+    )
+
+
+def generate_next_day_header(next_date_str):
+    """Header for the forward next-day-close section.
+
+    Always forward-looking, so it never uses the "Displaying" cue (that cue is
+    reserved for the main header's past-session accuracy recaps). `next_date_str`
+    is the concrete next trading session (utils.next_trading_day of the last
+    completed session) — before the bell this is today.
     """
-    Display market status with icon and description.
+    return f"Predictions for {next_date_str}"
+
+
+def display_market_status(last_available_date):
+    """
+    Display the single status-driven header.
     Args:
-        last_available_date: Last available trading date (for BEFORE_MARKET_OPEN state)
+        last_available_date: date of the last completed session (data.index[-1]).
+            Required — the caller only invokes this once it has a real session
+            date, so there is no meaningful None default.
     """
-    # Get current time in Eastern Time
-    current_time = get_nyse_datetime()
     status = market_status()
-    
-    # Format and display current date
-    date_str = current_time.strftime('%A, %B %d, %Y')
-    st.markdown(generate_market_status_header(date_str), unsafe_allow_html=True)
-
+    today_is_trading_day = is_trading_day(get_nyse_date())
     last_date_str = last_available_date.strftime('%A, %B %d')
-    time_str = current_time.strftime('%I:%M %p EST')  # Add EST to the time
 
-    st.markdown(generate_market_status_message(status, last_date_str, time_str), unsafe_allow_html=True)
-    
+    st.markdown(
+        generate_market_status_header(status, last_date_str, today_is_trading_day),
+        unsafe_allow_html=True,
+    )
     st.markdown("---")  # Add a separator line
