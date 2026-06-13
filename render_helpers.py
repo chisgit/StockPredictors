@@ -105,18 +105,12 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
         f"{int(volume):,}",
     ]
 
-    html = f"""
-    <div style="margin: 5px 0;">
-        <table style="width: 100%; text-align: center; border-collapse: collapse;">
-            <tr>
-                {''.join(f'<td style="width: 16.66%; padding: 2px;"><small style="opacity: 0.6;">{metric}</small></td>' for metric in metrics)}
-            </tr>
-            <tr>
-                {''.join(f'<td style="width: 16.66%; padding: 2px;"><span style="font-size: 1.1em; opacity: 0.8;">{value}</span></td>' for value in values)}
-            </tr>
-        </table>
-    </div>
-    """
+    grid_items = ''.join(
+        f'<div style="background: #f0f2f6; padding: 12px; border-radius: 6px; text-align: center;"><div style="font-size: 0.85em; opacity: 0.6; margin-bottom: 6px;">{metric}</div><div style="font-size: 1.1em; font-weight: 500;">{value}</div></div>'
+        for metric, value in zip(metrics, values)
+    )
+    
+    html = f'<div style="margin: 5px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px;">{grid_items}</div>'
     return html
 
 
