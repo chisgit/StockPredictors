@@ -1,6 +1,33 @@
 import yfinance as yf
 import pandas as pd
 import os
+from pathlib import Path
+import shutil
+
+
+def clear_yfinance_cache():
+    """
+    Remove local yfinance cache files so the library can rebuild them cleanly.
+    """
+    cache_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "py-yfinance"
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir, ignore_errors=True)
+        print(f"Cleared yfinance cache: {cache_dir}")
+
+
+def _download_with_retry(ticker, start_date, end_date):
+    """
+    Download once, and retry after clearing cache if yfinance hits a cache schema error.
+    """
+    try:
+        return yf.download(ticker, start=start_date, end=end_date)
+    except Exception as exc:
+        message = str(exc).lower()
+        if "no such table" in message or "_kv" in message or "operationalerror" in type(exc).__name__.lower():
+            print(f"yfinance cache error for {ticker}: {exc}")
+            clear_yfinance_cache()
+            return yf.download(ticker, start=start_date, end=end_date)
+        raise
 
 def custom_read_csv(file_path):
     """
@@ -40,7 +67,7 @@ def fetch_data(ticker, end_date, start_date="2008-01-01", use_local_data=False):
         print(f"Loaded data from local file: {local_file}")
     else:
         # Fetch data from yfinance
-        df = yf.download(ticker, start=start_date, end=end_date)
+        df = _download_with_retry(ticker, start_date, end_date)
         
         # Create MultiIndex columns if not already present
         if not isinstance(df.columns, pd.MultiIndex):
@@ -57,6 +84,6 @@ def fetch_data(ticker, end_date, start_date="2008-01-01", use_local_data=False):
             df_to_save.to_csv(local_file)
             print(f"Fetched data from yfinance and saved to: {local_file}")
         else:
-            raise ValueError(f"No data retrieved for ticker {ticker}")
+            raise ValueError(f"No data retrieved for ticker {ticker} from yfinance")
 
     return df
