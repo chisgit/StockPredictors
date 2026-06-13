@@ -1,10 +1,27 @@
 # Stock Predictor — UI/UX Improvement Plan
 
-Status: Draft · Owner: clpatel · Date: 2026-06-13
+Status: In progress · Owner: clpatel · Started: 2026-06-13
 
 This plan addresses the visual and structural issues in the prediction results
 view. Items are ordered by dependency: the market-status foundation must land
 first because every header and stats decision branches off it.
+
+## Progress
+| § | Change | Branch | State |
+|---|---|---|---|
+| §0 | Holiday/weekend-aware `market_status()` + tests | `feat/market-status-calendar` | ✅ merged (PR #8) |
+| — | `MARKET_NOW` env override (manual UI QA) | `chore/market-now-override` | ✅ merged (PR #9) |
+| — | gitignore `*_data.csv` | direct to main | ✅ merged (76a34cd) |
+| §1 | Single status-driven header | `feat/single-header` | ⏭ next |
+| §3 | Grouped, status-aware stats panel | `feat/stats-panel` | todo |
+| §2 | Two prediction model cards | `feat/prediction-cards` | todo |
+| §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | todo |
+| §6 | Strip chart chrome | `feat/chart-chrome` | todo |
+| §7 | Dark theme + light toggle | `feat/dark-theme-toggle` | todo |
+
+**Workflow per section:** branch off fresh `main` → implement → add/extend
+isolated tests under `tests/` → `pytest -q` green → push → PR → merge →
+delete branch. Verify UI states with `MARKET_NOW` (see §0).
 
 ---
 
