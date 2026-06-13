@@ -27,3 +27,6 @@ build/
 *.log
 .DS_Store
 .aider*
+
+# Local cached ticker data (regenerated at runtime)
+*_data.csv
