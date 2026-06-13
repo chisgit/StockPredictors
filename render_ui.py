@@ -4,6 +4,7 @@ from render_helpers import (
     group_predictions_by_ticker,
     extract_and_format_ticker_data,
     display_predictions,
+    display_tradingview_chart_from_data,
     preds_sameline,
     create_grid_display,
     search_and_add_ticker,
@@ -83,6 +84,9 @@ def display_results(predictions):
 
             # Replace the existing display logic with a call to display_predictions
             display_predictions(ticker, predictions_html)
+
+            # Embed a TradingView chart directly below the ticker and its predictions
+            display_tradingview_chart_from_data(ticker, latest_data)
 
             # Create grid display with appropriate close value based on market status
             grid_html = create_grid_display(
