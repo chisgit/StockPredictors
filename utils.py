@@ -38,16 +38,18 @@ def market_status():
     """Current NYSE market status: BEFORE_MARKET_OPEN, MARKET_OPEN, or
     AFTER_MARKET_CLOSE.
 
-    Holiday- and weekend-aware via the NYSE (XNYS) calendar. On any non-trading
-    day (weekend or holiday) the market is treated as BEFORE_MARKET_OPEN so the
-    UI shows the last completed session — this collapses Friday-after-close,
-    the weekend, and a holiday Monday into one "Before Open" state.
+    Holiday- and weekend-aware via the NYSE (XNYS) calendar. BEFORE_MARKET_OPEN
+    only occurs on a trading day before the bell; any non-trading day (weekend
+    or holiday) is AFTER_MARKET_CLOSE, since the last market event was a close.
+    The user only ever sees "open" vs "closed"; when closed the UI shows the
+    last completed session's date (from the data), so the before/after split is
+    internal only.
     """
     now = get_nyse_datetime()
 
-    # Non-trading day (weekend/holiday) -> show last session as Before Open.
+    # Non-trading day (weekend/holiday) -> market is closed (after last close).
     if not is_trading_day(now.date()):
-        return "BEFORE_MARKET_OPEN"
+        return "AFTER_MARKET_CLOSE"
 
     current_time = now.time()
     if current_time < MARKET_OPEN:

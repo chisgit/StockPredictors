@@ -18,17 +18,24 @@ returns `BEFORE_MARKET_OPEN` as if Tuesday's session were imminent. Since the
 competing-header fix and the stats-card label both branch on this function, it
 has to be correct before any UI work.
 
-### Target state — the three scenarios
-| Scenario | Condition | Header / data shown |
-|---|---|---|
-| **1.1 Before Open** | Today is a trading day, now < 09:30 ET, **or** today is a non-trading day (weekend/holiday) and the next session hasn't opened | Previous trading day's date + that day's final metrics. Predictions framed as "for `<prev trading day>`". |
-| **1.2 After Close** | Today is a trading day, now > 16:00 ET | "Today's Close Predictions". Today's final OHLC. |
-| **2. Market Open** | Today is a trading day, 09:30 ≤ now ≤ 16:00 ET | "Last Traded Price" (logic already present in [render_helpers.py:204](render_helpers.py#L204)). Live/last OHLC. |
+### Target state — what the user sees: OPEN or CLOSED
+The user only ever distinguishes **Open** vs **Closed**. Internally there are
+three statuses, but the before/after split only matters to code, never to the
+display. The single display rule: **when Closed, show the last completed
+session's date (from the data); when Open, show live "Last Traded" with no
+date.**
 
-Note the weekend/long-weekend collapse: Friday after close, all of Saturday,
-Sunday, and Monday-before-bell are the **same** state — "Before Open, showing
-last completed session." A holiday Monday extends that window through Tuesday's
-bell automatically once the calendar is consulted.
+| Internal status | Condition | Market | Display |
+|---|---|---|---|
+| `BEFORE_MARKET_OPEN` | Trading day, now < 09:30 ET | Closed | Last session date + that day's final metrics |
+| `MARKET_OPEN` | Trading day, 09:30 ≤ now ≤ 16:00 ET | Open | "Last Traded", live OHLC, no date |
+| `AFTER_MARKET_CLOSE` | Trading day, now > 16:00 ET **or** any non-trading day (weekend/holiday) | Closed | Last session date + final metrics |
+
+**Corrected logic (per review):** a non-trading day is `AFTER_MARKET_CLOSE`, not
+`BEFORE_MARKET_OPEN` — on a weekend/holiday the last market event was a *close*.
+This doesn't change what the user sees (still just "Closed", still the last
+session date), but it keeps the status name honest. Friday-after-close, the
+weekend, and a holiday Monday all read as Closed showing Friday's session.
 
 ### Approach
 1. **Previous trading day comes from the data, not a calculation.** The last row
@@ -48,8 +55,7 @@ bell automatically once the calendar is consulted.
    call and US-only — rejected in favor of the offline calendar.)
 3. **Rewrite `market_status()`** to return one of `BEFORE_MARKET_OPEN`,
    `MARKET_OPEN`, `AFTER_MARKET_CLOSE` using *both* the calendar and the clock:
-   - Not a trading day (weekend/holiday) → `BEFORE_MARKET_OPEN` (showing last
-     session).
+   - Not a trading day (weekend/holiday) → `AFTER_MARKET_CLOSE`.
    - Trading day, now < open → `BEFORE_MARKET_OPEN`.
    - Trading day, open ≤ now ≤ close → `MARKET_OPEN`.
    - Trading day, now > close → `AFTER_MARKET_CLOSE`.
@@ -57,11 +63,16 @@ bell automatically once the calendar is consulted.
 5. Cache the calendar/schedule lookup per run so we don't rebuild it once per
    ticker.
 
-### Acceptance
-- Saturday/Sunday any time → Before Open, showing Friday's data.
-- Memorial Day (Mon) → Before Open through Tuesday 09:30, showing Friday's data.
-- Normal weekday 10:00 → Market Open, "Last Traded".
-- Normal weekday 17:00 → After Close, "Today's Close Predictions".
+**Status: DONE** ([utils.py](utils.py)) — `is_trading_day()` cached per date;
+`market_status()` rewritten; covered by [tests/test_market_status.py](tests/test_market_status.py)
+(18 cases, time injected via monkeypatch).
+
+### Acceptance (locked by tests)
+- Saturday/Sunday any time → Closed (`AFTER_MARKET_CLOSE`), showing Friday's data.
+- Memorial Day (Mon) → Closed, showing Friday's data.
+- Normal weekday 10:00 → Open (`MARKET_OPEN`), "Last Traded".
+- Normal weekday 08:00 → Closed (`BEFORE_MARKET_OPEN`), showing prior session date.
+- Normal weekday 17:00 → Closed (`AFTER_MARKET_CLOSE`), showing today's date.
 
 ---
 
@@ -86,23 +97,19 @@ title are redundant and visually disagree (centered vs left).
   [render_ui.py:58](render_ui.py#L58); the header now carries that text.
 - Pick one alignment (left) for the whole block so it stops fighting itself.
 
-### Status note (subtitle) — shown ONLY in Before Open
-The day has **three statuses** across **two market on/off states**:
-| Status | Market | Note |
-|---|---|---|
-| Before Open | closed | **Show note** — "Predictions are for the previously traded date — `<prev trading day>`." |
-| Market Open | open | **No note** |
-| After Close | closed | **No note** |
+### Status note (subtitle) — one rule: Closed shows the session date
+Collapse to a single binary on `market_status()`:
+| Market | Subtitle |
+|---|---|
+| **Open** (`MARKET_OPEN`) | **None** — header says "Live — Last Traded"; the data is today's, self-explanatory. |
+| **Closed** (`BEFORE_MARKET_OPEN` or `AFTER_MARKET_CLOSE`) | Show the **displayed session's date** from `data.index[-1].date()` (e.g. "Predictions for the last traded session — Friday, June 12"). Before vs after open does not change this. |
 
 So the subtitle ([display_market_status.py:8-37](display_market_status.py#L8-L37))
-renders the note **only when `market_status() == BEFORE_MARKET_OPEN`**. In both
-Open and After Close the data shown is today's, so the header title alone
-("Live — Last Traded" / "Today's Close Predictions") is self-explanatory — no
-subtitle.
+renders **only when `market_status() != MARKET_OPEN`**, and its text is the
+session date pulled from the data — never a hardcoded string.
 - **Remove** the hardcoded "Today's closing prices are final." and the
   Market-Open subtitle strings at
-  [display_market_status.py:14-24](display_market_status.py#L14-L24); only the
-  Before-Open branch keeps a subtitle.
+  [display_market_status.py:14-24](display_market_status.py#L14-L24).
 
 ---
 
@@ -132,15 +139,12 @@ hold *today's* data (before open they hold the previous session).
 
 ### Fix
 - Wrap the grid in **one bordered panel** with a header.
-- Header text keyed on the **`data_is_from_today` predicate** (shared with §1's
-  subtitle), NOT on a three-way status split. The rule is simply *is the data on
-  screen from today or not*:
-  - **Data IS from today** (Market Open *or* After Close — both show today's
-    session) → "Today's Data". Market Open mid-session is still today.
-  - **Data NOT from today** (Before Open / weekend / long weekend) → show the
-    **date** of the session displayed (e.g. "Friday, June 12").
-- One predicate computed once per run; reused by header subtitle (§1), this
-  panel header, and anywhere else the displayed-session date matters.
+- Header text follows the **same binary as §1** — `market_status() == MARKET_OPEN`:
+  - **Open** → "Today's Data" (live session).
+  - **Closed** → the displayed session's date from `data.index[-1].date()`
+    (e.g. "Friday, June 12"). Same date string the §1 subtitle uses.
+- The session date is derived once from the data and reused by the §1 subtitle
+  and this panel header — single source, no separate predicate.
 - This removes the ambiguity about whose data the cards show.
 
 ---
@@ -228,10 +232,28 @@ left/right edges.
 
 ## Resolved Decisions
 - **Calendar lib:** `pandas_market_calendars` (`XNYS`). Offline, holiday-aware.
+- **Status:** non-trading day → `AFTER_MARKET_CLOSE` (not Before Open). User sees
+  only Open vs Closed.
+- **Display binary:** `market_status() == MARKET_OPEN`. Open → live "Last Traded",
+  no date. Closed (before/after/weekend/holiday) → show last session's date from
+  `data.index[-1].date()`. Drives both the §1 subtitle and the §3 panel header.
 - **Theme:** default full dark + a light-mode toggle icon, driven by a theme
   token dict in session state.
-- **Status note:** rendered **only in Before Open**; Open and After Close show
-  no subtitle (data is today's, header title suffices).
-- **Stats panel header:** "Today's Data" when Open or After Close; the displayed
-  session's date when Before Open. Same `data_is_from_today` predicate.
 - **Half-days:** out of scope — keep hardcoded 09:30/16:00.
+
+## Testing Strategy — every change tested in isolation
+The cross-branch risk ("if one change affects another, how would you know?") is
+answered by a **committed `pytest` suite**, not ad-hoc checks:
+- **One test file per concern**, named after the section it locks
+  (`tests/test_market_status.py` for §0; later `test_header.py`,
+  `test_stats_panel.py`, ...). Each file asserts only its own section's
+  behavior — that is the "in isolation" part.
+- **Determinism:** anything time- or environment-dependent is injected, not
+  read live. §0 monkeypatches `utils.get_nyse_datetime` so the same 18 cases
+  pass regardless of when the suite runs.
+- **Regression net across branches:** every feature branch runs the **full**
+  suite before merge. If a styling change in §2 silently alters status output,
+  §0's tests fail on that branch — that's how we know. Pure-CSS sections that
+  emit HTML get a smoke test asserting the key tokens/strings are present.
+- **Gate:** `pytest -q` green is a merge precondition for each branch.
+- Add `pytest` to [requirements.txt](requirements.txt) (done).
