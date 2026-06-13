@@ -23,6 +23,22 @@ def is_trading_day(date):
     schedule = _NYSE_CALENDAR.schedule(start_date=date, end_date=date)
     return not schedule.empty
 
+@lru_cache(maxsize=8)
+def next_trading_day(date):
+    """Next NYSE trading day strictly after `date` (skips weekends/holidays).
+
+    Used to label the forward "next day's close" prediction with its concrete
+    target session. Before the bell this resolves to today; in every other
+    state it is the session after the last completed one. Cached per date.
+    """
+    # Look ahead up to 10 calendar days — more than enough to clear a long
+    # holiday weekend — and take the first scheduled session after `date`.
+    start = date + timedelta(days=1)
+    schedule = _NYSE_CALENDAR.schedule(
+        start_date=start, end_date=start + timedelta(days=10)
+    )
+    return schedule.index[0].date()
+
 def get_nyse_datetime():
     """Current datetime in NYSE timezone.
 

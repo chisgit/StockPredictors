@@ -47,6 +47,17 @@ def generate_market_status_header(status, last_date_str, today_is_trading_day=Tr
     )
 
 
+def generate_next_day_header(next_date_str):
+    """Header for the forward next-day-close section.
+
+    Always forward-looking, so it never uses the "Displaying" cue (that cue is
+    reserved for the main header's past-session accuracy recaps). `next_date_str`
+    is the concrete next trading session (utils.next_trading_day of the last
+    completed session) — before the bell this is today.
+    """
+    return f"Predictions for {next_date_str}"
+
+
 def display_market_status(last_available_date=None):
     """
     Display the single status-driven header.

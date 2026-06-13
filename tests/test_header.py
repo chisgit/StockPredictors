@@ -12,9 +12,12 @@ State → header copy:
   AFTER_MARKET_CLOSE, off-day → "Market Closed Weekend/Holiday - Displaying
                                  Predictions for <date>"
 """
+from datetime import date
+
 import pytest
 
-from display_market_status import generate_market_status_header
+from display_market_status import generate_market_status_header, generate_next_day_header
+from utils import next_trading_day
 
 DATE = "Friday, June 12"
 
@@ -69,3 +72,22 @@ def test_hardcoded_finality_string_removed():
 def test_unknown_status_raises():
     with pytest.raises(ValueError):
         generate_market_status_header("NONSENSE", DATE)
+
+
+# --- next-day (forward) section header --------------------------------------
+def test_next_day_header_is_forward_no_displaying_cue():
+    # forward section never uses the "Displaying" past-session cue
+    html = generate_next_day_header("Monday, June 15")
+    assert html == "Predictions for Monday, June 15"
+    assert "Displaying" not in html
+
+
+# --- next_trading_day: concrete target session (real XNYS calendar) ---------
+@pytest.mark.parametrize("last_session, expected, desc", [
+    (date(2026, 6, 12), date(2026, 6, 15), "Fri -> Mon (skip weekend) = today before open"),
+    (date(2026, 6, 15), date(2026, 6, 16), "Mon -> Tue (normal next session)"),
+    (date(2026, 5, 22), date(2026, 5, 26), "Fri before Memorial Day -> Tue (skip Mon holiday)"),
+    (date(2026, 7, 2),  date(2026, 7, 6),  "Thu -> Mon (skip Jul 3 holiday + weekend)"),
+])
+def test_next_trading_day(last_session, expected, desc):
+    assert next_trading_day(last_session) == expected, desc
