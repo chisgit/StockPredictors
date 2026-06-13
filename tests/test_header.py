@@ -1,9 +1,16 @@
 """Isolated tests for the single status-driven header (plan section 1).
 
 Smoke-tests the rendered HTML of generate_market_status_header() per market
-status. Locks: one left-aligned header, status-driven title, inline icon, and
-the subtitle binary (date shown only when Closed-after-close). Pure function,
-no Streamlit / no time dependence, so it is deterministic.
+state. Locks: one left-aligned header, status-driven title, inline icon, and
+the after-close trading-day vs weekend/holiday split. Pure function, no
+Streamlit / no time dependence, so it is deterministic.
+
+State → header copy:
+  BEFORE_MARKET_OPEN          → "Market Closed - Displaying Predictions for <date>"
+  MARKET_OPEN                 → "Live — Last Traded" (no date)
+  AFTER_MARKET_CLOSE, trading → "Today's Close Predictions and Actuals" (no date)
+  AFTER_MARKET_CLOSE, off-day → "Market Closed Weekend/Holiday - Displaying
+                                 Predictions for <date>"
 """
 import pytest
 
@@ -12,29 +19,35 @@ from display_market_status import generate_market_status_header
 DATE = "Friday, June 12"
 
 
-def test_before_open_title_names_session_date():
+def test_before_open_shows_last_traded_date():
     html = generate_market_status_header("BEFORE_MARKET_OPEN", DATE)
-    assert "⏳" in html
-    assert f"Predictions for {DATE}" in html
-    # title already carries the date → no duplicate subtitle date
-    assert "Last traded session" not in html
+    assert "🔴" in html
+    assert f"Market Closed - Displaying Predictions for {DATE}" in html
 
 
 def test_market_open_live_no_date():
     html = generate_market_status_header("MARKET_OPEN", DATE)
     assert "🔔" in html
     assert "Live — Last Traded" in html
-    # Open → no session-date subtitle
     assert DATE not in html
-    assert "Last traded session" not in html
 
 
-def test_after_close_title_and_date_subtitle():
-    html = generate_market_status_header("AFTER_MARKET_CLOSE", DATE)
+def test_after_close_trading_day_predictions_and_actuals():
+    html = generate_market_status_header(
+        "AFTER_MARKET_CLOSE", DATE, today_is_trading_day=True
+    )
     assert "🔴" in html
-    assert "Today's Close Predictions" in html
-    # Closed-after-close → date appears in the subtitle
-    assert f"Last traded session — {DATE}" in html
+    assert "Today's Close Predictions and Actuals" in html
+    # today's close is final → no last-traded date in the title
+    assert DATE not in html
+
+
+def test_after_close_weekend_holiday_shows_last_traded_date():
+    html = generate_market_status_header(
+        "AFTER_MARKET_CLOSE", DATE, today_is_trading_day=False
+    )
+    assert "🔴" in html
+    assert f"Market Closed Weekend/Holiday - Displaying Predictions for {DATE}" in html
 
 
 def test_header_is_left_aligned_single_block():
