@@ -1,58 +1,56 @@
 import streamlit as st
-from utils import get_nyse_datetime, market_status
+from utils import market_status
 
-def generate_market_status_header(date_str):
-    """Generate the header with the current date."""
-    return f"<h2 style='text-align: center; margin-bottom: 0;'>{date_str}</h2>"
+# Inline status icon + title. Title is driven by market_status() so the single
+# header replaces the old centered date <h2> + the separate "Today's Close
+# Predictions" subheader (plan §1). User only ever distinguishes Open vs Closed.
+_STATUS = {
+    "BEFORE_MARKET_OPEN": {"icon": "⏳", "title": "Predictions for {date}"},
+    "MARKET_OPEN":        {"icon": "🔔", "title": "Live — Last Traded"},
+    "AFTER_MARKET_CLOSE": {"icon": "🔴", "title": "Today's Close Predictions"},
+}
 
-def generate_market_status_message(status, last_date_str, time_str):
-    """Generate the market status message based on the current market status."""
-    status_messages = {
-        "BEFORE_MARKET_OPEN": {
-            "icon": "⏳",
-            "title": "Market hasn't opened yet",
-            "subtitle": f"Predicted closing prices are for {last_date_str} based on the latest available data"
-        },
-        "MARKET_OPEN": {
-            "icon": "🔔",
-            "title": "Market is Open",
-            "subtitle": f"Predicted closing price for {last_date_str} based on current time: {time_str}"
-        },
-        "AFTER_MARKET_CLOSE": {
-            "icon": "🔴",
-            "title": "Market is Closed",
-            "subtitle": f"Predicted closing price for {last_date_str}. Today's closing prices are final."
-        }
-    }
-    
-    # Raise an error if the status is not found, which helps catch potential issues
-    if status not in status_messages:
+
+def generate_market_status_header(status, last_date_str):
+    """Single status-driven header (icon + title, left-aligned) with an optional
+    session-date subtitle.
+
+    Subtitle binary on market status:
+      - MARKET_OPEN          → no subtitle (data is today's, self-explanatory).
+      - AFTER_MARKET_CLOSE   → "Last traded session — <date>".
+      - BEFORE_MARKET_OPEN   → no subtitle; the title already names the session
+                               date, so a date subtitle would just duplicate it.
+    """
+    if status not in _STATUS:
         raise ValueError(f"Unknown market status: {status}")
-    
-    message = status_messages[status]
-    
-    return f"""<div style='text-align: center; margin-top: -10px;'>
-        <h3 style='margin-bottom: 0;'>{message['icon']} {message['title']}</h3>
-        <div style='font-size: 10pt; margin-top: -10px;'>{message['subtitle']}</div>
+
+    icon = _STATUS[status]["icon"]
+    title = _STATUS[status]["title"].format(date=last_date_str)
+
+    subtitle_html = ""
+    if status == "AFTER_MARKET_CLOSE":
+        subtitle_html = (
+            "<div style='font-size: 10pt; color: #64748b; margin-top: 2px;'>"
+            f"Last traded session — {last_date_str}</div>"
+        )
+
+    return f"""<div style='text-align: left; margin-bottom: 8px;'>
+        <h3 style='margin: 0;'>{icon} {title}</h3>
+        {subtitle_html}
     </div>"""
+
 
 def display_market_status(last_available_date=None):
     """
-    Display market status with icon and description.
+    Display the single status-driven header.
     Args:
-        last_available_date: Last available trading date (for BEFORE_MARKET_OPEN state)
+        last_available_date: date of the last completed session (data.index[-1]).
     """
-    # Get current time in Eastern Time
-    current_time = get_nyse_datetime()
     status = market_status()
-    
-    # Format and display current date
-    date_str = current_time.strftime('%A, %B %d, %Y')
-    st.markdown(generate_market_status_header(date_str), unsafe_allow_html=True)
-
     last_date_str = last_available_date.strftime('%A, %B %d')
-    time_str = current_time.strftime('%I:%M %p EST')  # Add EST to the time
 
-    st.markdown(generate_market_status_message(status, last_date_str, time_str), unsafe_allow_html=True)
-    
+    st.markdown(
+        generate_market_status_header(status, last_date_str),
+        unsafe_allow_html=True,
+    )
     st.markdown("---")  # Add a separator line

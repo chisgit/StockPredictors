@@ -55,7 +55,6 @@ def display_results(predictions):
             if len(ticker_data[ticker]) >= 2 and last_available_date is None:
                 last_available_date = ticker_data[ticker].index[-1].date()
                 display_market_status(last_available_date)
-                st.subheader("Today's Close Predictions")
 
         except Exception as e:
             st.error(f"Error in the downloading of current data for {ticker}: {str(e)}")
