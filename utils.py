@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, time as dt_time, timedelta
 from functools import lru_cache
 import pytz
@@ -23,8 +24,17 @@ def is_trading_day(date):
     return not schedule.empty
 
 def get_nyse_datetime():
-    """Get current datetime in NYSE timezone"""
-    return datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE) #- timedelta(hours=13) #for testing
+    """Current datetime in NYSE timezone.
+
+    Manual/QA override: set env var MARKET_NOW to an ISO datetime (e.g.
+    "2026-05-25T10:00") to force the app to believe it is that NYSE-local
+    instant. Used to eyeball market-status states in the UI without waiting for
+    a real weekend/holiday. Unset in production -> real wall clock.
+    """
+    override = os.environ.get("MARKET_NOW")
+    if override:
+        return NYSE_TIMEZONE.localize(datetime.fromisoformat(override))
+    return datetime.now(pytz.UTC).astimezone(NYSE_TIMEZONE)
 
 def get_nyse_date():
     """Get current date in NYSE timezone"""
