@@ -75,7 +75,7 @@ watchdog>=6.0.0
 wcwidth>=0.2.13
 webencodings>=0.5.1
 xgboost>=2.0.3
-yfinance>0.2.50
+yfinance>=1.4.1
 altair>=5.4.1
 asttokens>=3.0.0
 attrs>=24.2.0
@@ -153,4 +153,4 @@ watchdog>=6.0.0
 wcwidth>=0.2.13
 webencodings>=0.5.1
 xgboost>=2.0.3
-yfinance>0.2.50
+yfinance>=1.4.1
