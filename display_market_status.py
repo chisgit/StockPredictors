@@ -58,11 +58,13 @@ def generate_next_day_header(next_date_str):
     return f"Predictions for {next_date_str}"
 
 
-def display_market_status(last_available_date=None):
+def display_market_status(last_available_date):
     """
     Display the single status-driven header.
     Args:
         last_available_date: date of the last completed session (data.index[-1]).
+            Required — the caller only invokes this once it has a real session
+            date, so there is no meaningful None default.
     """
     status = market_status()
     today_is_trading_day = is_trading_day(get_nyse_date())
