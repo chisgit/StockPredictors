@@ -1,6 +1,6 @@
 # HANDOFF — session handoff
 
-Updated: 2026-06-13 · Branch: `main` @ `72a7846` · Working tree: clean
+Updated: 2026-06-13 · Branch: `main` @ `2eb062e` · Working tree: dirty (untracked: `.opencode/`, `before_predict.png`, `screenshot.png`, `take_screenshot.py`)
 
 ## What this work is
 Executing the UI/UX rework in [UI_UX_PLAN.md](UI_UX_PLAN.md) — fixing the
@@ -15,14 +15,12 @@ expected render, and **wait for their "looks good"** before `git commit` / PR /
 merge. Don't batch commit+PR+merge until they've eyeballed it.
 
 ## ⚠️ Worktree setup (use these — do NOT work in main repo on feature branches)
-Each active branch has its own isolated working directory. Stash-bleeding
-between branches caused problems in the previous session — worktrees fix this.
+Each active branch has its own isolated working directory.
 
 | Branch | Worktree path |
 |---|---|
 | `main` | `c:\Users\User\StockPredictors` |
 | `feat/prediction-cards` | `c:\Users\User\StockPredictors-prediction-cards` |
-| `feat/chart-chrome` | `c:\Users\User\StockPredictors-chart-chrome` |
 
 **venv is only in the main repo.** From any worktree, use absolute path:
 `c:\Users\User\StockPredictors\venv\Scripts\python.exe`
@@ -62,6 +60,10 @@ git worktree add "..\StockPredictors-<branch-slug>" <branch-name>
   Data" (open) or last session date e.g. "Friday, June 12" (closed).
   [render_ui.py](render_ui.py) passes `last_available_date` as `session_date`.
   Tests [tests/test_stats_panel.py](tests/test_stats_panel.py) (10 cases).
+- **§6** stripped chart chrome (PR #14).
+  Removed "TradingView Style Chart" eyebrow + "OHLC candles" caption.
+  Extracted `generate_chart_widget_html(ticker, chart_json)` — pure fn.
+  Tests [tests/test_chart_chrome.py](tests/test_chart_chrome.py) (6 cases).
 
 ## Key domain fact
 Today-target models use **today's intraday OHLCV** as features
@@ -83,36 +85,23 @@ Implementation complete, **awaiting manual test sign-off + commit**.
 - `tests/test_prediction_cards.py` (10 cases) — all passing.
 - **Next:** launch app from worktree (`<venv>/streamlit.exe run stock_predictors.py`),
   verify two side-by-side model cards render, get user "looks good", then
-  `git add render_helpers.py render_ui.py tests/test_prediction_cards.py && git commit`.
-
-### §6 — strip chart chrome (`feat/chart-chrome`) **PR #14 open**
-Worktree: `c:\Users\User\StockPredictors-chart-chrome`
-PR #14: https://github.com/chisgit/StockPredictors/pull/14
-Visually verified. Ready to merge.
-- Removed "TradingView Style Chart" eyebrow + "OHLC candles" caption.
-- Extracted `generate_chart_widget_html(ticker, chart_json)` — pure fn, enables
-  direct testing.
-- `tests/test_chart_chrome.py` (6 cases) — all passing.
-- **Next:** `gh pr merge --merge --delete-branch 14` then
-  `git worktree remove ..\StockPredictors-chart-chrome`.
+  commit, push, PR, merge.
 
 ## Concurrency map — remaining work
 
 ```
-main (§0✅ §1✅ §3✅)
+main (§0✅ §1✅ §3✅ §6✅)
 │
 ├── §2  feat/prediction-cards  render_helpers.py:61-90  🔄 IN PROGRESS (worktree ready)
-├── §6  feat/chart-chrome      render_helpers.py:121,124  🔄 PR #14 open
 └── data-wiring (render_ui.py only)                       unclaimed
         │
         └── §4+§5  feat/close-color-deltas  (after §2 merges)
                 │
-                └── §7  feat/dark-theme-toggle  (last — after §2 §4+§5 §6)
+                └── §7  feat/dark-theme-toggle  (last — after §2 §4+§5)
 ```
 
 ### Parallel-safe (non-overlapping files/lines off same main)
 - **data-wiring** — unclaimed, touches `render_ui.py` only. Safe to start now.
-- **§6** — PR open, merge independently of §2.
 
 ### Sequential gates
 - **§4+§5 after §2** — §5 applies to the new cards §2 creates.
