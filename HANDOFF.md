@@ -1,6 +1,6 @@
 # HANDOFF — session handoff
 
-Updated: 2026-06-13 · Branch: `main` @ `6b700ad` · Working tree: clean
+Updated: 2026-06-13 · Branch: `main` @ `2eb062e` · Working tree: dirty (untracked: `.opencode/`, `before_predict.png`, `screenshot.png`, `take_screenshot.py`)
 
 ## What this work is
 Executing the UI/UX rework in [UI_UX_PLAN.md](UI_UX_PLAN.md) — fixing the
@@ -8,110 +8,111 @@ Executing the UI/UX rework in [UI_UX_PLAN.md](UI_UX_PLAN.md) — fixing the
 done one per branch, dependency-ordered. Read UI_UX_PLAN.md first; its
 **Progress** table is the source of truth for what's done.
 
-## ⚠️ Workflow rule (NEW — honor it)
+## ⚠️ Workflow rule (honor every session)
 **Manually test each feature/fix in the running app BEFORE commit/PR/merge.**
 After implementing, launch the app, give the user the localhost URL + the
 expected render, and **wait for their "looks good"** before `git commit` / PR /
-merge. Don't batch commit+PR+merge until they've eyeballed it. (Several §1 style
-rounds — center vs left, subtitle size, gap — were driven by live render.)
+merge. Don't batch commit+PR+merge until they've eyeballed it.
+
+## ⚠️ Worktree setup (use these — do NOT work in main repo on feature branches)
+Each active branch has its own isolated working directory.
+
+| Branch | Worktree path |
+|---|---|
+| `main` | `c:\Users\User\StockPredictors` |
+| `feat/prediction-cards` | `c:\Users\User\StockPredictors-prediction-cards` |
+
+**venv is only in the main repo.** From any worktree, use absolute path:
+`c:\Users\User\StockPredictors\venv\Scripts\python.exe`
+`c:\Users\User\StockPredictors\venv\Scripts\streamlit.exe`
+
+To add a new worktree for a new branch:
+```powershell
+git worktree add "..\StockPredictors-<branch-slug>" <branch-name>
+```
 
 ## App shape (orientation)
 - Streamlit app. Entry: [stock_predictors.py](stock_predictors.py)
-  (`streamlit run stock_predictors.py`).
+  (`c:\Users\User\StockPredictors\venv\Scripts\streamlit.exe run stock_predictors.py`
+  — run from the worktree dir for that branch).
 - Results UI: [render_ui.py](render_ui.py) `display_results()` →
-  [render_helpers.py](render_helpers.py) (prediction pill, TradingView chart,
+  [render_helpers.py](render_helpers.py) (prediction cards, TradingView chart,
   stats grid) + [display_market_status.py](display_market_status.py) (header).
 - Market status: [utils.py](utils.py) `market_status()` / `is_trading_day()` /
   `next_trading_day()`.
-- venv: `./venv/Scripts/python.exe`, `./venv/Scripts/streamlit`.
-- Tests: `./venv/Scripts/python.exe -m pytest tests/ -q` (currently 30 passing).
+- Tests: `<venv>/python.exe -m pytest tests/ -q` (40 passing on main).
 
 ## Done (merged to main)
 - **§0** holiday/weekend-aware `market_status()` (PR #8) + `MARKET_NOW` env
-  override (PR #9) + gitignore `*_data.csv`. Tests
-  [tests/test_market_status.py](tests/test_market_status.py) (18 cases).
+  override (PR #9) + gitignore `*_data.csv`.
+  Tests [tests/test_market_status.py](tests/test_market_status.py) (18 cases).
 - **§1** single status-driven header (PR #10) + style polish (PR #11, #12).
-  Implemented in [display_market_status.py](display_market_status.py):
-  - **Centered, two-line** header via `generate_market_status_header()`:
-    title line (status phrase + icon), grey subtitle below (~65% size, snug,
-    `margin-top: -10px`). States:
-    - `BEFORE_MARKET_OPEN` → 🔴 "Market Closed" + "Displaying Predictions for
-      `<last session>`".
-    - `MARKET_OPEN` → 🔔 "Live — Last Traded" (no subtitle).
-    - `AFTER_MARKET_CLOSE` trading day → 🔴 "Today's Close Predictions and
-      Actuals" (no subtitle).
-    - `AFTER_MARKET_CLOSE` weekend/holiday → 🔴 "Market Closed Weekend/Holiday"
-      + "Displaying Predictions for `<last session>`".
-    - "Displaying" = deliberate "not today, past-session accuracy recap" cue.
-      After-close split via `is_trading_day(today)`.
-  - **Dated next-day section** via `generate_next_day_header()` →
-    "Predictions for `<next_session>`", `next_session =
-    utils.next_trading_day(last session)` (XNYS; before bell = today). Replaced
-    generic `st.subheader("Next Day's Close Predictions")` in render_ui.py.
+  [display_market_status.py](display_market_status.py) `generate_market_status_header()`:
+  - `BEFORE_MARKET_OPEN` → 🔴 "Market Closed" + "Displaying Predictions for `<last session>`"
+  - `MARKET_OPEN` → 🔔 "Live — Last Traded" (no subtitle)
+  - `AFTER_MARKET_CLOSE` trading day → 🔴 "Today's Close Predictions and Actuals"
+  - `AFTER_MARKET_CLOSE` weekend/holiday → 🔴 "Market Closed Weekend/Holiday" + "Displaying Predictions for `<last session>`"
+  - Dated next-day header via `generate_next_day_header()`.
   - Tests [tests/test_header.py](tests/test_header.py) (12 cases).
-  - Verified manually with `MARKET_NOW` (before-open Mon + weekend Sat).
+- **§3** grouped stats panel (PR #13).
+  [render_helpers.py](render_helpers.py) `create_grid_display()` now accepts
+  `session_date`. Wraps OHLC/Volume cards in bordered panel; header = "Today's
+  Data" (open) or last session date e.g. "Friday, June 12" (closed).
+  [render_ui.py](render_ui.py) passes `last_available_date` as `session_date`.
+  Tests [tests/test_stats_panel.py](tests/test_stats_panel.py) (10 cases).
+- **§6** stripped chart chrome (PR #14).
+  Removed "TradingView Style Chart" eyebrow + "OHLC candles" caption.
+  Extracted `generate_chart_widget_html(ticker, chart_json)` — pure fn.
+  Tests [tests/test_chart_chrome.py](tests/test_chart_chrome.py) (6 cases).
 
-## Key domain fact (verified in pipeline this session)
+## Key domain fact
 Today-target models use **today's intraday OHLCV** as features
-([feature_engineering.py:179](feature_engineering.py#L179)), fed from the last
-fetched row ([pipeline.py:57-58,128](pipeline.py#L57-L58)). **Before the bell
-there is no today row**, so the "today" prediction is really a re-prediction of
-the **last** session. The real forward prediction (targets today) is the
-**next-day** model (its features include `Close`,
-[feature_engineering.py:181](feature_engineering.py#L181)). This is why before
-open the main section is framed as a past-session accuracy recap.
+([feature_engineering.py:179](feature_engineering.py#L179)). **Before the bell
+there is no today row** — "today" prediction is a re-prediction of the last
+session. Real forward prediction is the next-day model. This is why before open
+the main section is framed as a past-session accuracy recap.
 
-## Next: §3 — grouped, status-aware stats panel
-Branch `feat/stats-panel` off fresh `main`. Plan §3 in UI_UX_PLAN.md. Summary:
-- Wrap the floating OHLC/Volume cards
-  ([render_helpers.py:190-236](render_helpers.py#L190-L236)) in ONE bordered
-  panel with a header.
-- Panel header follows the same binary as §1: `market_status() == MARKET_OPEN`
-  → "Today's Data"; Closed → the displayed session date from
-  `data.index[-1].date()` (reuse the same date the §1 subtitle shows).
-- Add `tests/test_stats_panel.py` (smoke-test rendered HTML strings per status).
+## Active branches
+
+### §2 — two prediction model cards (`feat/prediction-cards`)
+Worktree: `c:\Users\User\StockPredictors-prediction-cards`
+Implementation complete, **awaiting manual test sign-off + commit**.
+- `render_helpers.py` — `_model_card_html`, `_prediction_cards_container_html`,
+  `generate_prediction_cards_html`, updated `display_predictions` (3-arg).
+  Replaces `preds_sameline()`.
+- `render_ui.py` — removed `preds_sameline` import; calls
+  `display_predictions(ticker, predictions, current_val)` directly.
+- `tests/test_prediction_cards.py` (10 cases) — all passing.
+- **Next:** launch app from worktree (`<venv>/streamlit.exe run stock_predictors.py`),
+  verify two side-by-side model cards render, get user "looks good", then
+  commit, push, PR, merge.
 
 ## Concurrency map — remaining work
 
 ```
-main (§0✅ §1✅)
+main (§0✅ §1✅ §3✅ §6✅)
 │
-├── §3  feat/stats-panel       render_helpers.py:190-236  ─┐
-├── §2  feat/prediction-cards  render_helpers.py:61-90    ─┼─→ §4+§5 → §7
-├── §6  feat/chart-chrome      render_helpers.py:121,124  ─┘
-└── data-wiring (render_ui.py only)  ──────────────────────────── standalone
+├── §2  feat/prediction-cards  render_helpers.py:61-90  🔄 IN PROGRESS (worktree ready)
+└── data-wiring (render_ui.py only)                       unclaimed
+        │
+        └── §4+§5  feat/close-color-deltas  (after §2 merges)
+                │
+                └── §7  feat/dark-theme-toggle  (last — after §2 §4+§5)
 ```
 
-### Can run in parallel (all branch off same main, non-overlapping lines)
-- **§3, §2, §6** — all touch `render_helpers.py` but at line ranges that don't
-  overlap; branches off the same `main` commit merge without conflicts.
-- **Data-wiring follow-up** — touches `render_ui.py` only; zero overlap with
-  any `render_helpers.py` branch → always concurrent-safe with §2/§3/§6.
+### Parallel-safe (non-overlapping files/lines off same main)
+- **data-wiring** — unclaimed, touches `render_ui.py` only. Safe to start now.
 
-### Must be sequential
-- **§4+§5 after §2** — §5 bolds the delta in `preds_sameline()` (line 75),
-  but §2 *replaces* `preds_sameline()` with two model cards. Run §5 on the new
-  cards §2 creates, not the old strip. Merge §2 first, then branch §4+§5 off
-  updated main.
-- **§7 last** — final visual pass across `render_helpers.py` (prediction cards,
-  stats panel, chart tokens). Must follow §2, §3, §4+§5, and §6 so the theme
-  token dict is applied to completed, final markup — not draft markup that §2/§3
-  will reshape.
+### Sequential gates
+- **§4+§5 after §2** — §5 applies to the new cards §2 creates.
+- **§7 last** — final theme pass over completed markup.
 
-### Recommended execution order
-1. **Now (parallel):** §3 + §2 + §6 + data-wiring — branch all off current main,
-   merge in any order (no conflicts).
-2. **After §2 merges:** §4+§5 off updated main.
-3. **After §2 + §3 + §4+§5 + §6 all merged:** §7.
-
-## ⚠️ Open follow-up (own branch, before/after §3 — user's call)
-**Before-open prediction-vs-actual data wiring.** §1 fixed header *labels* only.
-Before open the main section's numbers are the today-model run on the last row
-(a re-prediction of the last session). To make the "Displaying Predictions for
-`<Friday>`" panel actually pair **Friday's prediction vs Friday's actual close**,
-change [render_ui.py](render_ui.py) `display_results()` to feed the last-session
-prediction + actual to the main section when `market_status() != MARKET_OPEN`.
-See UI_UX_PLAN.md §1 "Follow-up".
+## ⚠️ Open follow-up (own branch — user's call)
+**Before-open prediction-vs-actual data wiring.** §1 fixed header labels only.
+To make "Displaying Predictions for `<Friday>`" pair Friday's prediction vs
+Friday's actual close, change [render_ui.py](render_ui.py) `display_results()`
+to feed last-session prediction + actual to main section when
+`market_status() != MARKET_OPEN`. See UI_UX_PLAN.md §1 "Follow-up".
 
 ## Decisions locked (see UI_UX_PLAN.md "Resolved Decisions")
 - Calendar lib: `pandas_market_calendars` (XNYS), offline.
@@ -120,20 +121,27 @@ See UI_UX_PLAN.md §1 "Follow-up".
 - Theme (§7): default full dark + light-toggle icon, via a theme token dict.
 - Half-days: out of scope (hardcoded 09:30/16:00).
 
+## Agent coordination (startflow/handoff skills)
+- `/startflow` claims next unclaimed task: reads concurrency map, checks
+  `git branch -a` for existing remote branches, creates + pushes branch (atomic
+  lock), marks plan doc `🔄 in progress` on feature branch.
+- Use dedicated worktree for each feature branch — see table above.
+- `/handoff` writes this file + commits on current branch.
+
 ## Workflow / conventions
-- One branch per section: branch off main → implement → **manual test (see rule
-  above)** → tests → `pytest -q` green → push → `gh pr create` → `gh pr merge
-  --merge --delete-branch`.
-- Commits end with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- One branch per section + one worktree per branch.
+- branch off main → implement in worktree → **manual test** →
+  tests → `pytest -q` green → push → `gh pr create` → `gh pr merge --merge
+  --delete-branch` → `git worktree remove`.
+- Commits end with `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`.
 - Each section gets its own isolated test file.
-- Docs/PROGRESS updates go direct to main.
 
 ## Gotchas
 - Status only renders after clicking **Predict** (runs `yf.download` — live
   network, can lag/flake).
-- Manual UI states via `MARKET_NOW`, e.g.
-  `$env:MARKET_NOW="2026-06-13T12:00"; ./venv/Scripts/streamlit run stock_predictors.py`
-  (Sat → weekend). Other states: Mon 08:00 before-open, Mon 12:00 open, Mon
-  17:00 after-close, 2026-05-25T10:00 Memorial Day.
+- Manual UI states via `MARKET_NOW`:
+  `$env:MARKET_NOW="2026-06-13T08:00"; <venv>/streamlit.exe run stock_predictors.py`
+  Other states: `T12:00` open, `T17:00` after-close, `2026-05-25T10:00` Memorial Day.
+- `.opencode/` untracked directory — leave it (not part of this project).
 - `requirements.txt` is duplicated (merge artifact) — not yet cleaned.
 - Stray local branch `feature/improve-grid-layout` exists (pre-existing, leave it).

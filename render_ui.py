@@ -24,6 +24,18 @@ def enforce_max_tickers():
         ]
 
 
+def _session_ref_caption(session_date, actual_close):
+    """Caption text for closed-market prediction display.
+
+    Clarifies that the prediction delta is vs the last session's actual close,
+    not a forward-looking gap from a live price.
+    """
+    return (
+        f"Δ vs {session_date.strftime('%A, %b %d')} "
+        f"actual close · ${actual_close:.2f}"
+    )
+
+
 def display_results(predictions):
     """Display latest market data and predictions for each ticker."""
     enforce_max_tickers()
@@ -31,6 +43,11 @@ def display_results(predictions):
     last_available_date = None
     todays_close_predictions = predictions[0]
     next_day_close_predictions = predictions[1]
+
+    # Resolve market status once — drives main-section framing.
+    # MARKET_OPEN: Δ = gap from live price (forward view).
+    # Closed: Δ = prediction vs last session's actual close (accuracy view).
+    status = market_status()
 
     print(f"Today's Close and Next_Day Predictions: {predictions}")
 
@@ -76,15 +93,19 @@ def display_results(predictions):
             if formatted_data is None:
                 continue
 
-            # Combine ticker header with predictions on same line
-            predictions_html = preds_sameline(
-                grouped_predictions[ticker], formatted_data["Close"]
-            )
-
-            # Replace the existing display logic with a call to display_predictions
+            # Pair prediction with reference price.
+            # Closed: actual_close = last session's official close (accuracy recap).
+            # Open: actual_close = current intraday price (live forward view).
+            actual_close = formatted_data["Close"]
+            predictions_html = preds_sameline(grouped_predictions[ticker], actual_close)
             display_predictions(ticker, predictions_html)
 
-            # Embed a TradingView chart directly below the ticker and its predictions
+            # When market is closed, surface the reference so users see
+            # this as an accuracy recap, not a forward prediction.
+            if status != "MARKET_OPEN" and last_available_date is not None:
+                st.caption(_session_ref_caption(last_available_date, actual_close))
+
+            # Chart sits directly below the prediction strip and accuracy note
             display_tradingview_chart_from_data(ticker, latest_data)
 
             # Create grid display with appropriate close value based on market status

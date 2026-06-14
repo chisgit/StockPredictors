@@ -16,8 +16,9 @@ first because every header and stats decision branches off it.
 | — | §1 header style polish (2-line centered, grey subtitle, tight gap) | `feat/header-style`, `fix/header-gap` | ✅ merged (PR #11, #12) |
 | §3 | Grouped, status-aware stats panel | `feat/stats-panel` | ✅ merged (PR #13) |
 | §2 | Two prediction model cards | `feat/prediction-cards` | 🔄 in progress |
+| §1f | Before-open prediction-vs-actual data wiring | `feat/data-wiring` | 🔄 in progress |
 | §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | todo |
-| §6 | Strip chart chrome | `feat/chart-chrome` | 🔄 in progress |
+| §6 | Strip chart chrome | `feat/chart-chrome` | ✅ merged (PR #14) |
 | §7 | Dark theme + light toggle | `feat/dark-theme-toggle` | todo |
 
 **Workflow per section:** branch off fresh `main` → implement → add/extend
