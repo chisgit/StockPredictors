@@ -19,9 +19,9 @@ first because every header and stats decision branches off it.
 | §1f | Before-open prediction-vs-actual data wiring | `feat/data-wiring` | ✅ merged (PR #15) |
 | §1f-δ | Inline Δ label on prediction cards (replace redundant caption) | `feat/delta-label` | ✅ merged (PR #17) |
 | §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | ✅ merged (PR #18) |
-| §1f-δ-lowered | Move Δ label below price diff in card | `feat/delta-lowered` | 🔧 in progress (worktree) |
+| §1f-δ-lowered | Move Δ label below price diff in card | `feat/delta-lowered` | ✅ done (other agent) |
 | §6 | Strip chart chrome | `feat/chart-chrome` | ✅ merged (PR #14) |
-| §7 | Dark theme + light toggle | `feat/dark-theme-toggle` | todo |
+| §7 | Dark theme + light toggle | `feat/dark-theme-toggle` | 🔄 in progress → see [DARK_MODE_PLAN.md](DARK_MODE_PLAN.md) (DM1–DM6) |
 
 **Workflow per section:** branch off fresh `main` → implement → add/extend
 isolated tests under `tests/` → `pytest -q` green → push → PR → merge →
@@ -256,13 +256,17 @@ The `Δ from close` / `Δ from last traded` label was placed inline left of the
 instead, still inside the same model card tile. Stack: price large → price diff
 colored → delta label muted below.
 
-### Status: in progress (`feat/delta-lowered`)
-Uncommitted change in worktree `StockPredictors-delta-lowered`. Needs
-manual review + confirmation before commit.
+### Status: done (completed by other agent)
 
 ---
 
 ## 7. Visual Cohesion — Dark Mode for Cards + Edge Alignment
+
+> **Deferred to [DARK_MODE_PLAN.md](DARK_MODE_PLAN.md).** §7 grew large (theme
+> base + six polish items DM1–DM6), so its live tracking moved to a dedicated
+> plan file. **Convention:** when a section's change set gets large, split it
+> into its own `*_PLAN.md` and defer to it from this row — the most recent /
+> dedicated plan file wins. The base spec below stays for context.
 
 ### Problem
 The chart is dark ([render_helpers.py:118-140](render_helpers.py#L118-L140)) but

@@ -7,6 +7,10 @@ from render_helpers import (
     display_tradingview_chart_from_data,
     create_grid_display,
     search_and_add_ticker,
+    section_container_html,
+    render_section_container,
+    ticker_header_html,
+    THEME,
 )
 from rules import UI_RULES
 from display_market_status import display_market_status, generate_next_day_header
@@ -84,45 +88,35 @@ def display_results(predictions):
             if formatted_data is None:
                 continue
 
-            st.markdown(
-                '<div style="border: 1px solid rgba(148,163,184,0.18); border-radius: 20px; padding: 18px 18px 16px; margin: 20px 0 14px 0; background: #f1f5f9; box-shadow: 0 4px 16px rgba(15,23,42,0.04);">',
-                unsafe_allow_html=True,
-            )
+            theme = st.session_state.get("theme", "dark")
 
-            # Section header with ticker and bar
-            st.markdown(
-                f'<div style="display: flex; align-items: center; gap: 10px;">'
-                f'<div style="width: 4px; height: 22px; background: #3b82f6; border-radius: 3px;"></div>'
-                f'<span style="font-size: 1.15em; font-weight: 800; color: #0f172a;">{ticker}</span>'
-                f'<div style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(148,163,184,0.3), transparent);"></div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+            with render_section_container(f"ticker_section_{ticker}", theme):
+                # Section header with ticker and bar
+                st.markdown(ticker_header_html(ticker, theme), unsafe_allow_html=True)
 
-            # Pair prediction with reference price.
-            # Closed: actual_close = last session's official close (accuracy recap).
-            # Open: actual_close = current intraday price (live forward view).
-            actual_close = formatted_data["Close"]
+                # Pair prediction with reference price.
+                # Closed: actual_close = last session's official close (accuracy recap).
+                # Open: actual_close = current intraday price (live forward view).
+                actual_close = formatted_data["Close"]
 
-            # Display two model cards with predictions
-            display_predictions(grouped_predictions[ticker], actual_close, _delta_caption(status == "MARKET_OPEN"))
+                # Display two model cards with predictions
+                display_predictions(grouped_predictions[ticker], actual_close, _delta_caption(status == "MARKET_OPEN"), theme)
 
-            # Chart sits directly below the prediction strip and accuracy note
-            display_tradingview_chart_from_data(ticker, latest_data)
+                # Chart sits directly below the prediction strip and accuracy note
+                display_tradingview_chart_from_data(ticker, latest_data, theme)
 
-            # Create grid display with appropriate close value based on market status
-            grid_html = create_grid_display(
-                formatted_data["Open"],
-                formatted_data["High"],
-                formatted_data["Low"],
-                formatted_data["Prev Close"],
-                formatted_data["Close"],
-                formatted_data["Volume"],
-                session_date=last_available_date,
-            )
-            st.markdown(grid_html, unsafe_allow_html=True)
-
-            st.markdown('</div>', unsafe_allow_html=True)
+                # Create grid display with appropriate close value based on market status
+                grid_html = create_grid_display(
+                    formatted_data["Open"],
+                    formatted_data["High"],
+                    formatted_data["Low"],
+                    formatted_data["Prev Close"],
+                    formatted_data["Close"],
+                    formatted_data["Volume"],
+                    session_date=last_available_date,
+                    theme_name=theme,
+                )
+                st.markdown(grid_html, unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Error processing {ticker}: {str(e)}")
@@ -151,23 +145,15 @@ def display_results(predictions):
                             latest_data["Close"].iloc[-1].item()
                         )  # Added .item()
 
-                        st.markdown(
-                            '<div style="border: 1px solid rgba(148,163,184,0.18); border-radius: 20px; padding: 18px 18px 16px; margin: 20px 0 14px 0; background: #f1f5f9; box-shadow: 0 4px 16px rgba(15,23,42,0.04);">',
-                            unsafe_allow_html=True,
-                        )
+                        theme = st.session_state.get("theme", "dark")
+
+                        st.markdown(section_container_html(theme), unsafe_allow_html=True)
 
                         # Section header with ticker and bar
-                        st.markdown(
-                            f'<div style="display: flex; align-items: center; gap: 10px;">'
-                            f'<div style="width: 4px; height: 22px; background: #3b82f6; border-radius: 3px;"></div>'
-                            f'<span style="font-size: 1.15em; font-weight: 800; color: #0f172a;">{ticker}</span>'
-                            f'<div style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(148,163,184,0.3), transparent);"></div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(ticker_header_html(ticker, theme), unsafe_allow_html=True)
 
                         # Display two model cards for next-day predictions
-                        display_predictions(predictions, current_close, _delta_caption(status == "MARKET_OPEN"))
+                        display_predictions(predictions, current_close, _delta_caption(status == "MARKET_OPEN"), theme)
 
                         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -192,6 +178,13 @@ def update_selected_tickers(change):
 
 
 def render_ui():
+    with st.sidebar:
+        current_theme = st.session_state.get("theme", "dark")
+        icon = "☀️" if current_theme == "dark" else "🌙"
+        if st.button(icon, use_container_width=False):
+            st.session_state.theme = "light" if current_theme == "dark" else "dark"
+            st.rerun()
+
     st.title("Stock Price Predictor")
 
     # Initialize default tickers if not already in session state

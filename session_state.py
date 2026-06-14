@@ -21,7 +21,16 @@ def initialize_session_state():
 
     if 'results_key' not in st.session_state:
         st.session_state.results_key = 0
-        
+
+    if 'theme' not in st.session_state:
+        st.session_state.theme = "dark"
+
+    if 'last_predictions' not in st.session_state:
+        st.session_state.last_predictions = None
+
+    if 'last_rendered_theme' not in st.session_state:
+        st.session_state.last_rendered_theme = None
+
     return st.session_state
 
 def is_ticker_selected(ticker):

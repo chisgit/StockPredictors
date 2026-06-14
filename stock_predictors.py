@@ -15,21 +15,30 @@ def main():
     if hasattr(st.session_state, 'run_prediction') and st.session_state.run_prediction:
         # Reset the flag
         st.session_state.run_prediction = False
-        
+
         # Increment the key to force new containers on next render
         st.session_state.results_key += 1
-        
+
         # Wait for 2 seconds
         time_module.sleep(2)
-        
+
         # Get selected tickers
         tickers = st.session_state.selected_tickers
-        
+
         # Execute pipeline
         predictions = execute_pipeline(tickers)
-        
+
+        # Cache predictions so theme toggle can re-render without re-fetching
+        st.session_state.last_predictions = predictions
+        st.session_state.last_rendered_theme = st.session_state.get('theme', 'dark')
+
         # Display results
         display_results(predictions)
+    elif (st.session_state.get('last_predictions') is not None and
+          st.session_state.get('last_rendered_theme') != st.session_state.get('theme', 'dark')):
+        # Re-render on theme change only — data served from st.cache_data (no re-fetch)
+        display_results(st.session_state.last_predictions)
+        st.session_state.last_rendered_theme = st.session_state.get('theme', 'dark')
 
 # Run the main function
 if __name__ == "__main__":
