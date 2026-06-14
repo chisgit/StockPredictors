@@ -8,6 +8,7 @@ from render_helpers import (
     create_grid_display,
     search_and_add_ticker,
     section_container_html,
+    render_section_container,
     ticker_header_html,
     THEME,
 )
@@ -89,36 +90,33 @@ def display_results(predictions):
 
             theme = st.session_state.get("theme", "dark")
 
-            st.markdown(section_container_html(theme), unsafe_allow_html=True)
+            with render_section_container(f"ticker_section_{ticker}", theme):
+                # Section header with ticker and bar
+                st.markdown(ticker_header_html(ticker, theme), unsafe_allow_html=True)
 
-            # Section header with ticker and bar
-            st.markdown(ticker_header_html(ticker, theme), unsafe_allow_html=True)
+                # Pair prediction with reference price.
+                # Closed: actual_close = last session's official close (accuracy recap).
+                # Open: actual_close = current intraday price (live forward view).
+                actual_close = formatted_data["Close"]
 
-            # Pair prediction with reference price.
-            # Closed: actual_close = last session's official close (accuracy recap).
-            # Open: actual_close = current intraday price (live forward view).
-            actual_close = formatted_data["Close"]
+                # Display two model cards with predictions
+                display_predictions(grouped_predictions[ticker], actual_close, _delta_caption(status == "MARKET_OPEN"), theme)
 
-            # Display two model cards with predictions
-            display_predictions(grouped_predictions[ticker], actual_close, _delta_caption(status == "MARKET_OPEN"), theme)
+                # Chart sits directly below the prediction strip and accuracy note
+                display_tradingview_chart_from_data(ticker, latest_data, theme)
 
-            # Chart sits directly below the prediction strip and accuracy note
-            display_tradingview_chart_from_data(ticker, latest_data, theme)
-
-            # Create grid display with appropriate close value based on market status
-            grid_html = create_grid_display(
-                formatted_data["Open"],
-                formatted_data["High"],
-                formatted_data["Low"],
-                formatted_data["Prev Close"],
-                formatted_data["Close"],
-                formatted_data["Volume"],
-                session_date=last_available_date,
-                theme_name=theme,
-            )
-            st.markdown(grid_html, unsafe_allow_html=True)
-
-            st.markdown('</div>', unsafe_allow_html=True)
+                # Create grid display with appropriate close value based on market status
+                grid_html = create_grid_display(
+                    formatted_data["Open"],
+                    formatted_data["High"],
+                    formatted_data["Low"],
+                    formatted_data["Prev Close"],
+                    formatted_data["Close"],
+                    formatted_data["Volume"],
+                    session_date=last_available_date,
+                    theme_name=theme,
+                )
+                st.markdown(grid_html, unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Error processing {ticker}: {str(e)}")

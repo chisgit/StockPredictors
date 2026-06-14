@@ -333,13 +333,52 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
 
 
 def section_container_html(theme_name=None):
-    """Return open-tag HTML for a ticker section container. Always dark to match Streamlit chrome."""
+    """Return open-tag HTML for a ticker section container. Always dark to match Streamlit chrome.
+
+    DEPRECATED (DM3): a lone opening <div> from st.markdown can't wrap sibling
+    widgets or the chart iframe — Streamlit sanitizes each block independently
+    and force-closes it. Use render_section_container() instead. Retained until
+    DM6 migrates the next-day section.
+    """
     dark = THEME["dark"]
     return (
         f'<div style="border: 1px solid {dark["section_border"]}; border-radius: 20px; '
         f'padding: 18px 18px 16px; margin: 20px 0 14px 0; '
         f'background: {dark["section_bg"]}; box-shadow: {dark["section_shadow"]};">'
     )
+
+
+def _safe_key(key):
+    """CSS-class-safe key: tickers like BRK-B / ^GSPC -> underscores."""
+    return "".join(c if c.isalnum() else "_" for c in str(key))
+
+
+def section_container_css(key, theme_name=None):
+    """Scoped <style> styling the native st.container(key=...) as a ticker
+    grouping card (DM3). Pure string so it's unit-testable; the actual mount
+    happens in render_section_container."""
+    t = _resolve_theme(theme_name)
+    safe = _safe_key(key)
+    return (
+        f"<style>.st-key-{safe} {{ "
+        f"background: {t['section_bg']}; "
+        f"border: 1px solid {t['section_border']}; "
+        f"border-radius: 20px; "
+        f"padding: 18px 18px 16px; "
+        f"box-shadow: {t['section_shadow']}; }}</style>"
+    )
+
+
+def render_section_container(key, theme_name=None):
+    """Native bordered grouping card for a ticker section (DM3).
+
+    Returns a native st.container — use it as a `with` block so the header,
+    prediction cards, chart iframe, and stats grid all nest inside one visually
+    grouped surface. Reusable: DM6 applies it to the next-day section too.
+    """
+    safe = _safe_key(key)
+    st.markdown(section_container_css(safe, theme_name), unsafe_allow_html=True)
+    return st.container(key=safe)
 
 
 def ticker_header_html(ticker, theme_name=None):

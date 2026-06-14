@@ -11,6 +11,8 @@ from render_helpers import (
     create_grid_display,
     generate_chart_widget_html,
     section_container_html,
+    section_container_css,
+    _safe_key,
     ticker_header_html,
     _close_color,
 )
@@ -142,3 +144,33 @@ def test_ticker_header_always_dark_text():
         html = ticker_header_html("TSLA", theme)
         assert THEME["dark"]["ticker_color"] in html
         assert "TSLA" in html
+
+
+# ── DM3 native grouping container ────────────────────────────────────────────
+# render_section_container mounts a native st.container styled via this scoped
+# CSS (pure-string, testable). Replaces the broken lone-<div> wrapper.
+
+def test_section_css_targets_keyed_container():
+    css = section_container_css("ticker_section_AAPL", "dark")
+    assert ".st-key-ticker_section_AAPL" in css
+
+
+def test_section_css_dark_bg():
+    css = section_container_css("ticker_section_AAPL", "dark")
+    assert THEME["dark"]["section_bg"] in css
+    assert THEME["dark"]["section_border"] in css
+
+
+def test_section_css_light_bg():
+    css = section_container_css("ticker_section_AAPL", "light")
+    assert THEME["light"]["section_bg"] in css
+
+
+def test_safe_key_sanitizes_special_chars():
+    assert _safe_key("ticker_section_BRK-B") == "ticker_section_BRK_B"
+    assert _safe_key("^GSPC") == "_GSPC"
+
+
+def test_section_css_uses_safe_key():
+    css = section_container_css("ticker_section_BRK-B", "dark")
+    assert ".st-key-ticker_section_BRK_B" in css
