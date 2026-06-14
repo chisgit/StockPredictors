@@ -1,6 +1,6 @@
 # Dark Mode — Polish Pass Plan
 
-Status: DM3 done · Owner: clpatel · Started: 2026-06-14
+Status: DM3 done ✅ · Owner: clpatel · Started: 2026-06-14
 Branch: `feat/dark-theme-toggle` (all six items land here — see Branching below)
 
 This plan is the §7 follow-through from [UI_UX_PLAN.md](UI_UX_PLAN.md). §7 introduced
@@ -111,7 +111,8 @@ active theme into `display_market_status()` (it already has access via
 > Confirmed: match the `text_delta_label` muted color **only** — not the green/red
 > up/down value color. Subtitle color is a fixed theme token, never per-delta.
 
-### DM3 — Real grouping card (the structural one)
+### DM3 — Real grouping card (the structural one) ✅
+Landed at `4e7af7b` on `feat/dark-theme-toggle`. `render_section_container()` helper + scoped `.st-key-` CSS replaces broken `section_container_html()`.
 This is the root defect behind the "card is just a bar at the top" complaint.
 **Cause:** Streamlit renders each `st.markdown`/`components.html` in its own DOM
 block and sanitizes unbalanced tags, so the lone opening `<div>` from
