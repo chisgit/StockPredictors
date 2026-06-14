@@ -12,8 +12,9 @@ first because every header and stats decision branches off it.
 | §0 | Holiday/weekend-aware `market_status()` + tests | `feat/market-status-calendar` | ✅ merged (PR #8) |
 | — | `MARKET_NOW` env override (manual UI QA) | `chore/market-now-override` | ✅ merged (PR #9) |
 | — | gitignore `*_data.csv` | direct to main | ✅ merged (76a34cd) |
-| §1 | Single status-driven header | `feat/single-header` | ⏭ next |
-| §3 | Grouped, status-aware stats panel | `feat/stats-panel` | todo |
+| §1 | Single status-driven header | `feat/single-header` | ✅ merged (PR #10) |
+| — | §1 header style polish (2-line centered, grey subtitle, tight gap) | `feat/header-style`, `fix/header-gap` | ✅ merged (PR #11, #12) |
+| §3 | Grouped, status-aware stats panel | `feat/stats-panel` | ⏭ next |
 | §2 | Two prediction model cards | `feat/prediction-cards` | todo |
 | §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | todo |
 | §6 | Strip chart chrome | `feat/chart-chrome` | todo |
@@ -127,6 +128,43 @@ session date pulled from the data — never a hardcoded string.
 - **Remove** the hardcoded "Today's closing prices are final." and the
   Market-Open subtitle strings at
   [display_market_status.py:14-24](display_market_status.py#L14-L24).
+
+### Status: DONE (PR #10, #11, #12)
+Final implemented behavior — **single centered, status-driven header** in
+[display_market_status.py](display_market_status.py) `generate_market_status_header()`:
+
+| State | Title line | Subtitle (grey, ~65% size, snug) |
+|---|---|---|
+| `BEFORE_MARKET_OPEN` | 🔴 Market Closed | Displaying Predictions for `<last session>` |
+| `MARKET_OPEN` | 🔔 Live — Last Traded | none |
+| `AFTER_MARKET_CLOSE`, trading day | 🔴 Today's Close Predictions and Actuals | none |
+| `AFTER_MARKET_CLOSE`, weekend/holiday | 🔴 Market Closed Weekend/Holiday | Displaying Predictions for `<last session>` |
+
+- "Displaying" cue = deliberate "not today, past-session accuracy recap"; only
+  on the two closed-with-past-session states. `AFTER_MARKET_CLOSE` split via
+  `is_trading_day(today)`.
+- The forward **next-day section** header is now dated:
+  `generate_next_day_header()` → "Predictions for `<next_session>`" where
+  `next_session = utils.next_trading_day(last session)` (XNYS, skips
+  weekends/holidays; before the bell resolves to today). Replaces the generic
+  `st.subheader("Next Day's Close Predictions")` at [render_ui.py](render_ui.py).
+- Verified the data flow: today-target models need today's intraday OHLCV
+  ([feature_engineering.py:179](feature_engineering.py#L179)), which doesn't
+  exist pre-bell — so before open the main section is a previous-session
+  accuracy recap, and the next-day section carries today's real forward
+  prediction.
+- Tests: [tests/test_header.py](tests/test_header.py) (12 cases: copy per state,
+  no "Displaying" on forward header, `next_trading_day` over weekend + Memorial
+  Day + Jul-4-observed).
+
+### ⚠️ Follow-up (NOT done — own branch): before-open prediction-vs-actual wiring
+§1 fixed header **labels** only. Before open the main section's *numbers* are the
+today-model run on the last row (effectively a re-prediction of the last
+session). To make the "Displaying Predictions for `<Friday>`" panel actually pair
+**Friday's prediction vs Friday's actual close**, the data wiring in
+[render_ui.py](render_ui.py) `display_results()` must change (feed the
+last-session prediction + actual to the main section when
+`market_status() != MARKET_OPEN`). Tracked as its own section/branch.
 
 ---
 
