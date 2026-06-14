@@ -71,6 +71,39 @@ Branch `feat/stats-panel` off fresh `main`. Plan §3 in UI_UX_PLAN.md. Summary:
   `data.index[-1].date()` (reuse the same date the §1 subtitle shows).
 - Add `tests/test_stats_panel.py` (smoke-test rendered HTML strings per status).
 
+## Concurrency map — remaining work
+
+```
+main (§0✅ §1✅)
+│
+├── §3  feat/stats-panel       render_helpers.py:190-236  ─┐
+├── §2  feat/prediction-cards  render_helpers.py:61-90    ─┼─→ §4+§5 → §7
+├── §6  feat/chart-chrome      render_helpers.py:121,124  ─┘
+└── data-wiring (render_ui.py only)  ──────────────────────────── standalone
+```
+
+### Can run in parallel (all branch off same main, non-overlapping lines)
+- **§3, §2, §6** — all touch `render_helpers.py` but at line ranges that don't
+  overlap; branches off the same `main` commit merge without conflicts.
+- **Data-wiring follow-up** — touches `render_ui.py` only; zero overlap with
+  any `render_helpers.py` branch → always concurrent-safe with §2/§3/§6.
+
+### Must be sequential
+- **§4+§5 after §2** — §5 bolds the delta in `preds_sameline()` (line 75),
+  but §2 *replaces* `preds_sameline()` with two model cards. Run §5 on the new
+  cards §2 creates, not the old strip. Merge §2 first, then branch §4+§5 off
+  updated main.
+- **§7 last** — final visual pass across `render_helpers.py` (prediction cards,
+  stats panel, chart tokens). Must follow §2, §3, §4+§5, and §6 so the theme
+  token dict is applied to completed, final markup — not draft markup that §2/§3
+  will reshape.
+
+### Recommended execution order
+1. **Now (parallel):** §3 + §2 + §6 + data-wiring — branch all off current main,
+   merge in any order (no conflicts).
+2. **After §2 merges:** §4+§5 off updated main.
+3. **After §2 + §3 + §4+§5 + §6 all merged:** §7.
+
 ## ⚠️ Open follow-up (own branch, before/after §3 — user's call)
 **Before-open prediction-vs-actual data wiring.** §1 fixed header *labels* only.
 Before open the main section's numbers are the today-model run on the last row
