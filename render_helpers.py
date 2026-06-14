@@ -58,7 +58,7 @@ def extract_and_format_ticker_data(latest_data):
     return formatted_data
 
 
-def _model_card_html(model_name, predicted_price, delta, delta_color, delta_sign):
+def _model_card_html(model_name, predicted_price, delta, delta_color, delta_sign, delta_label):
     return (
         '<div style="flex: 1; min-width: 160px; padding: 16px; border-radius: 14px; '
         'border: 1px solid rgba(148,163,184,0.18); '
@@ -68,8 +68,10 @@ def _model_card_html(model_name, predicted_price, delta, delta_color, delta_sign
         f'text-transform: uppercase; color: #475569; margin-bottom: 8px;">{model_name}</div>'
         f'<div style="font-size: 1.5em; font-weight: 800; color: #0f172a; line-height: 1.2; '
         f'margin-bottom: 4px;">${predicted_price:.2f}</div>'
-        f'<div style="font-size: 1.05em; font-weight: 700; color: {delta_color};">'
-        f'({delta_sign}${abs(delta):.2f})</div>'
+        f'<div style="display: flex; align-items: center; justify-content: center; gap: 5px;">'
+        f'<span style="font-size: 0.7em; font-weight: 600; color: #94a3b8; white-space: nowrap;">{delta_label}</span>'
+        f'<span style="font-size: 1.05em; font-weight: 700; color: {delta_color};">({delta_sign}${abs(delta):.2f})</span>'
+        f'</div>'
         '</div>'
     )
 
@@ -82,7 +84,7 @@ def _prediction_cards_container_html(cards_html):
     )
 
 
-def generate_prediction_cards_html(predictions, current_val):
+def generate_prediction_cards_html(predictions, current_val, delta_label):
     """Build HTML for two side-by-side model prediction cards."""
     cards_html = ""
     for i, prediction in enumerate(predictions):
@@ -90,14 +92,14 @@ def generate_prediction_cards_html(predictions, current_val):
         delta = prediction - current_val
         delta_color = "#4CAF50" if delta >= 0 else "#FF5252"
         delta_sign = "+" if delta > 0 else ("-" if delta < 0 else "")
-        cards_html += _model_card_html(model_name, prediction, delta, delta_color, delta_sign)
+        cards_html += _model_card_html(model_name, prediction, delta, delta_color, delta_sign, delta_label)
     return _prediction_cards_container_html(cards_html)
 
 
-def display_predictions(predictions, current_val):
+def display_predictions(predictions, current_val, delta_label):
     """Display predictions as two side-by-side model cards."""
     st.markdown(
-        generate_prediction_cards_html(predictions, current_val),
+        generate_prediction_cards_html(predictions, current_val, delta_label),
         unsafe_allow_html=True,
     )
 

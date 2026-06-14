@@ -23,16 +23,8 @@ def enforce_max_tickers():
         ]
 
 
-def _session_ref_caption(session_date, actual_close):
-    """Caption text for closed-market prediction display.
-
-    Clarifies that the prediction delta is vs the last session's actual close,
-    not a forward-looking gap from a live price.
-    """
-    return (
-        f"Δ vs {session_date.strftime('%A, %b %d')} "
-        f"actual close · ${actual_close:.2f}"
-    )
+def _delta_caption(is_open):
+    return "Δ from last traded" if is_open else "Δ from close"
 
 
 def display_results(predictions):
@@ -113,12 +105,7 @@ def display_results(predictions):
             actual_close = formatted_data["Close"]
 
             # Display two model cards with predictions
-            display_predictions(grouped_predictions[ticker], actual_close)
-
-            # When market is closed, surface the reference so users see
-            # this as an accuracy recap, not a forward prediction.
-            if status != "MARKET_OPEN" and last_available_date is not None:
-                st.caption(_session_ref_caption(last_available_date, actual_close))
+            display_predictions(grouped_predictions[ticker], actual_close, _delta_caption(status == "MARKET_OPEN"))
 
             # Chart sits directly below the prediction strip and accuracy note
             display_tradingview_chart_from_data(ticker, latest_data)
@@ -180,7 +167,7 @@ def display_results(predictions):
                         )
 
                         # Display two model cards for next-day predictions
-                        display_predictions(predictions, current_close)
+                        display_predictions(predictions, current_close, _delta_caption(status == "MARKET_OPEN"))
 
                         st.markdown('</div>', unsafe_allow_html=True)
 
