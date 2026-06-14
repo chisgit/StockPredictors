@@ -5,7 +5,6 @@ from render_helpers import (
     extract_and_format_ticker_data,
     display_predictions,
     display_tradingview_chart_from_data,
-    preds_sameline,
     create_grid_display,
     search_and_add_ticker,
 )
@@ -76,13 +75,23 @@ def display_results(predictions):
             if formatted_data is None:
                 continue
 
-            # Combine ticker header with predictions on same line
-            predictions_html = preds_sameline(
-                grouped_predictions[ticker], formatted_data["Close"]
+            st.markdown(
+                '<div style="border: 1px solid rgba(148,163,184,0.18); border-radius: 20px; padding: 18px 18px 16px; margin: 20px 0 14px 0; background: #f1f5f9; box-shadow: 0 4px 16px rgba(15,23,42,0.04);">',
+                unsafe_allow_html=True,
             )
 
-            # Replace the existing display logic with a call to display_predictions
-            display_predictions(ticker, predictions_html)
+            # Section header with ticker and bar
+            st.markdown(
+                f'<div style="display: flex; align-items: center; gap: 10px;">'
+                f'<div style="width: 4px; height: 22px; background: #3b82f6; border-radius: 3px;"></div>'
+                f'<span style="font-size: 1.15em; font-weight: 800; color: #0f172a;">{ticker}</span>'
+                f'<div style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(148,163,184,0.3), transparent);"></div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Display two model cards with predictions
+            display_predictions(grouped_predictions[ticker], formatted_data["Close"])
 
             # Embed a TradingView chart directly below the ticker and its predictions
             display_tradingview_chart_from_data(ticker, latest_data)
@@ -98,6 +107,8 @@ def display_results(predictions):
                 session_date=last_available_date,
             )
             st.markdown(grid_html, unsafe_allow_html=True)
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Error processing {ticker}: {str(e)}")
@@ -126,11 +137,25 @@ def display_results(predictions):
                             latest_data["Close"].iloc[-1].item()
                         )  # Added .item()
 
-                        # Use preds_sameline to format the predictions
-                        predictions_html = preds_sameline(predictions, current_close)
+                        st.markdown(
+                            '<div style="border: 1px solid rgba(148,163,184,0.18); border-radius: 20px; padding: 18px 18px 16px; margin: 20px 0 14px 0; background: #f1f5f9; box-shadow: 0 4px 16px rgba(15,23,42,0.04);">',
+                            unsafe_allow_html=True,
+                        )
 
-                        # Display the predictions
-                        display_predictions(ticker, predictions_html)
+                        # Section header with ticker and bar
+                        st.markdown(
+                            f'<div style="display: flex; align-items: center; gap: 10px;">'
+                            f'<div style="width: 4px; height: 22px; background: #3b82f6; border-radius: 3px;"></div>'
+                            f'<span style="font-size: 1.15em; font-weight: 800; color: #0f172a;">{ticker}</span>'
+                            f'<div style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(148,163,184,0.3), transparent);"></div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                        # Display two model cards for next-day predictions
+                        display_predictions(predictions, current_close)
+
+                        st.markdown('</div>', unsafe_allow_html=True)
 
                 except Exception as e:
 
