@@ -39,14 +39,14 @@ def generate_market_status_header(status, last_date_str, today_is_trading_day=Tr
     else:
         raise ValueError(f"Unknown market status: {status}")
 
-    # subtitle ~65% of title size (1.05rem vs 1.6rem), dark grey
+    # subtitle ~65% of title size (1.05rem vs 1.6rem), dark grey, snug under title
     subtitle_html = (
-        f"<div style='font-size: 1.05rem; color: #555555; margin-top: -4px;'>{subtitle}</div>"
+        f"<div style='font-size: 1.05rem; line-height: 1.1; color: #555555; margin-top: -10px;'>{subtitle}</div>"
         if subtitle else ""
     )
     return (
         "<div style='text-align: center; margin-bottom: 8px;'>"
-        f"<h3 style='margin: 0; font-size: 1.6rem;'>{icon} {title}</h3>"
+        f"<h3 style='margin: 0; font-size: 1.6rem; line-height: 1.2;'>{icon} {title}</h3>"
         f"{subtitle_html}"
         "</div>"
     )
