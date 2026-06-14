@@ -19,6 +19,7 @@ first because every header and stats decision branches off it.
 | §1f | Before-open prediction-vs-actual data wiring | `feat/data-wiring` | ✅ merged (PR #15) |
 | §1f-δ | Inline Δ label on prediction cards (replace redundant caption) | `feat/delta-label` | ✅ merged (PR #17) |
 | §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | ✅ merged (PR #18) |
+| §1f-δ-lowered | Move Δ label below price diff in card | `feat/delta-lowered` | 🔧 in progress (worktree) |
 | §6 | Strip chart chrome | `feat/chart-chrome` | ✅ merged (PR #14) |
 | §7 | Dark theme + light toggle | `feat/dark-theme-toggle` | todo |
 
@@ -244,6 +245,20 @@ hold *today's* data (before open they hold the previous session).
   ([render_helpers.py:122](render_helpers.py#L122)) as the only chart title.
 - Keep the right-side Y-axis whitespace and the red dashed price line —
   TradingView defaults, intentionally kept for breathing room.
+
+---
+
+## 1f-δ-lowered. Δ Label Position — Below Price Diff (in-card)
+
+### Change
+The `Δ from close` / `Δ from last traded` label was placed inline left of the
+`(+$X.XX)` price difference by PR #17. Move it **below** the price difference
+instead, still inside the same model card tile. Stack: price large → price diff
+colored → delta label muted below.
+
+### Status: in progress (`feat/delta-lowered`)
+Uncommitted change in worktree `StockPredictors-delta-lowered`. Needs
+manual review + confirmation before commit.
 
 ---
 
