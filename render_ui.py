@@ -7,7 +7,6 @@ from render_helpers import (
     display_tradingview_chart_from_data,
     create_grid_display,
     search_and_add_ticker,
-    section_container_html,
     render_section_container,
     ticker_header_html,
     THEME,
@@ -147,15 +146,12 @@ def display_results(predictions):
 
                         theme = st.session_state.get("theme", "dark")
 
-                        st.markdown(section_container_html(theme), unsafe_allow_html=True)
+                        with render_section_container(f"next_day_section_{ticker}", theme):
+                            # Section header with ticker and bar
+                            st.markdown(ticker_header_html(ticker, theme), unsafe_allow_html=True)
 
-                        # Section header with ticker and bar
-                        st.markdown(ticker_header_html(ticker, theme), unsafe_allow_html=True)
-
-                        # Display two model cards for next-day predictions
-                        display_predictions(predictions, current_close, _delta_caption(status == "MARKET_OPEN"), theme)
-
-                        st.markdown('</div>', unsafe_allow_html=True)
+                            # Display two model cards for next-day predictions
+                            display_predictions(predictions, current_close, _delta_caption(status == "MARKET_OPEN"), theme)
 
                 except Exception as e:
 
