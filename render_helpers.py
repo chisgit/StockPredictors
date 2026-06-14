@@ -90,8 +90,15 @@ def generate_prediction_cards_html(predictions, current_val, delta_label):
     for i, prediction in enumerate(predictions):
         model_name = "Linear Regression" if i == 0 else "XGBoost"
         delta = prediction - current_val
-        delta_color = "#4CAF50" if delta >= 0 else "#FF5252"
-        delta_sign = "+" if delta > 0 else ("-" if delta < 0 else "")
+        if delta > 0:
+            delta_color = "#4CAF50"
+            delta_sign = "+"
+        elif delta < 0:
+            delta_color = "#FF5252"
+            delta_sign = "-"
+        else:
+            delta_color = "#475569"
+            delta_sign = ""
         cards_html += _model_card_html(model_name, prediction, delta, delta_color, delta_sign, delta_label)
     return _prediction_cards_container_html(cards_html)
 
@@ -201,14 +208,19 @@ def generate_chart_widget_html(ticker, chart_json):
     """
 
 
+def _close_color(close_val, prev_close_val):
+    if close_val > prev_close_val:
+        return "#166534"
+    if close_val < prev_close_val:
+        return "#991b1b"
+    return "#475569"
+
+
 def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, volume, session_date=None):
     def format_price(value):
         return f"${value:,.2f}"
 
-    close_is_up = close_val >= prev_close_val
-    close_bg = "rgba(34,197,94,0.12)" if close_is_up else "rgba(239,68,68,0.12)"
-    close_border = "rgba(34,197,94,0.28)" if close_is_up else "rgba(239,68,68,0.28)"
-    close_color = "#166534" if close_is_up else "#991b1b"
+    close_val_color = _close_color(close_val, prev_close_val)
 
     metrics = [
         "Open",
@@ -227,12 +239,15 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
         f"{int(volume):,}",
     ]
 
+    NEUTRAL_BG = "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.9))"
+    NEUTRAL_BORDER = "rgba(148,163,184,0.18)"
+
     grid_items = []
     for metric, value in zip(metrics, values):
         is_emphasis = metric in ("Prev Close", "Last Traded", "Close")
-        card_bg = close_bg if metric == "Last Traded" or metric == "Close" else "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.9))"
-        card_border = close_border if metric == "Last Traded" or metric == "Close" else "rgba(148,163,184,0.18)"
-        value_color = close_color if metric == "Last Traded" or metric == "Close" else "#0f172a"
+        card_bg = NEUTRAL_BG
+        card_border = NEUTRAL_BORDER
+        value_color = close_val_color if metric in ("Last Traded", "Close") else "#0f172a"
         metric_color = "#475569" if not is_emphasis else "#334155"
         grid_items.append(
             f'<div style="position: relative; overflow: hidden; padding: 14px 14px 13px; border-radius: 16px; border: 1px solid {card_border}; background: {card_bg}; box-shadow: 0 10px 24px rgba(15,23,42,0.05); text-align: left;">'
