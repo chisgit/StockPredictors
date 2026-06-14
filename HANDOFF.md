@@ -1,6 +1,6 @@
 # HANDOFF — session handoff
 
-Updated: 2026-06-14 · Branch: `main` @ `8555e77` (rebased over PR #17) · Working tree: clean (untracked: `.opencode/`, `before_predict.png`, `screenshot.png`, `take_screenshot.py`, `.kilo/`)
+Updated: 2026-06-14 · Branch: `main` @ `3bd95b5` · Working tree: clean (untracked: `.opencode/`, `.kilo/`, `before_predict.png`, `screenshot.png`, `take_screenshot.py`)
 
 ## What this work is
 Executing the UI/UX rework in [UI_UX_PLAN.md](UI_UX_PLAN.md) — fixing the
@@ -29,7 +29,7 @@ merge. Don't batch commit+PR+merge until they've eyeballed it.
   stats grid) + [display_market_status.py](display_market_status.py) (header).
 - Market status: [utils.py](utils.py) `market_status()` / `is_trading_day()` /
   `next_trading_day()`.
-- Tests: `<venv>/python.exe -m pytest tests/ -q` (61 passing on main).
+- Tests: `venv/Scripts/python.exe -m pytest tests/ -q` (67 passing on main).
 
 ## Done (merged to main)
 - **§0** holiday/weekend-aware `market_status()` (PR #8) + `MARKET_NOW` env
@@ -39,50 +39,59 @@ merge. Don't batch commit+PR+merge until they've eyeballed it.
   [display_market_status.py](display_market_status.py) `generate_market_status_header()`.
   Tests [tests/test_header.py](tests/test_header.py) (12 cases).
 - **§1f** before-open prediction-vs-actual data wiring (PR #15).
-  Tests [tests/test_data_wiring.py](tests/test_data_wiring.py) (11 cases).
+  Tests [tests/test_data_wiring.py](tests/test_data_wiring.py) (9 cases).
 - **§1f-δ** inline Δ label on prediction cards (PR #17).
-  Replaced `st.caption` with inline label left of `(+$X.XX)` in each model card.
-  Closed → `Δ from close`. Open → `Δ from last traded`. Shows in both states.
-  `_session_ref_caption` removed; `_delta_caption(is_open)` in [render_ui.py](render_ui.py).
-  Label threaded: `display_predictions` → `generate_prediction_cards_html` → `_model_card_html`.
+  `_delta_caption(is_open)` → `"Δ from close"` / `"Δ from last traded"`.
+  Label inline left of `(+$X.XX)` in each model card. No standalone caption.
 - **§3** grouped stats panel (PR #13).
   [render_helpers.py](render_helpers.py) `create_grid_display()`.
   Tests [tests/test_stats_panel.py](tests/test_stats_panel.py).
 - **§6** stripped chart chrome (PR #14).
   Tests [tests/test_chart_chrome.py](tests/test_chart_chrome.py) (6 cases).
 - **§2** two prediction model cards (PR #16).
-  Replaced `preds_sameline()` with side-by-side Linear Regression / XGBoost cards.
-  Tests [tests/test_prediction_cards.py](tests/test_prediction_cards.py) (10 cases).
+  Side-by-side Linear Regression / XGBoost cards with predicted price + colored delta.
+  Tests [tests/test_prediction_cards.py](tests/test_prediction_cards.py) (11 cases).
+- **§4+§5** close-card neutral bg + color number + equal-case delta (PR #18).
+  §4: Close/Last-Traded card bg/border neutral (matches other cards); value text
+  colored via `_close_color(close, prev_close)` — green/red/neutral.
+  §5: Prediction card deltas explicit 3-way: up=green/`+`, down=red/`-`,
+  equal=neutral `#475569`/no sign. Bold (`font-weight: 700`) was already wired
+  by PR #17.
+  Tests [tests/test_close_color_deltas.py](tests/test_close_color_deltas.py) (9 cases).
 
 ## Key domain facts
-- Close price = last traded price of regular session. `Δ from close` and
-  `Δ from last traded` are the same value after the bell; they differ only
-  during market hours (live intraday vs prior-day official close).
-- Today-target models use **today's intraday OHLCV** as features
-  ([feature_engineering.py:179](feature_engineering.py#L179)). Before the bell
-  there is no today row — "today" prediction is a re-prediction of the last session.
+- Close price = last traded price of regular session. `Δ from close` (closed)
+  and `Δ from last traded` (open) differ only during market hours.
+- Today-target models use today's intraday OHLCV as features
+  ([feature_engineering.py](feature_engineering.py)). Before the bell there is
+  no today row — "today" prediction re-predicts last session.
+- Equal-delta test: pass `[actual_close, actual_close]` as predictions to
+  force `delta = 0` and verify neutral rendering.
 
-## Next task — §4+§5: close-card color + bold deltas
-Branch: `feat/close-color-deltas` (exists, 1 commit ahead of pre-rebase main; WIP stashed).
-- **§4:** Close/Last-Traded card — neutral background, color only the number
-  (green up, red down, neutral equal). No whole-card tint.
-- **§5:** Deltas in prediction cards — bold (`font-weight: 700`), slightly larger.
-  Already partially wired from §2; verify and lock with a test.
-
-**To resume:** `git checkout feat/close-color-deltas && git rebase main && git stash pop`
+## Next task — §7: dark theme + light toggle
+Branch: `feat/dark-theme-toggle` (create off fresh `main`).
+- Default full dark mode for prediction cards and stats panel to match TradingView chart.
+- Palette: bg `#0f172a`/`#111827`, borders `rgba(148,163,184,0.18)`, text `#f8fafc`/`#cbd5e1`.
+- Add theme-toggle icon (🌙/☀️) stored in `st.session_state.theme` (default `"dark"`).
+- Drive colors from a token dict `THEME["dark"]`/`THEME["light"]` consumed by
+  `display_predictions`, `create_grid_display`, and the chart builder.
+- Align all cards to chart's left/right edges (same max-width/padding).
 
 ## Open follow-ups
 - **Large card container refinement.** §2 wrapped each ticker section in a
-  unified card (slate-100 background). Visual treatment is placeholder — needs
-  polish. Tracked in UI_UX_PLAN.md §7 scope or separate.
+  unified slate-100 card — visual treatment is placeholder. Tracked in
+  UI_UX_PLAN.md §7 scope.
+- **`requirements.txt` duplication** — merge artifact, not yet cleaned.
 
 ## Decisions locked
 - Calendar lib: `pandas_market_calendars` (XNYS), offline.
 - User sees only Open/Closed; Closed shows last session date.
-- Theme (§7): default full dark + light-toggle icon, via a theme token dict.
-- Half-days: out of scope (hardcoded 09:30/16:00).
 - Delta label: `Δ from close` (closed) / `Δ from last traded` (open). Inline
-  left of price diff, no price value shown (it's redundant — grid below has it).
+  left of price diff, no price value shown (grid below has it).
+- Close card: neutral background, color-only-number (not whole-card tint).
+- Equal delta: neutral grey `#475569`, no `+`/`-` sign.
+- Theme (§7): default full dark + light-toggle icon, via theme token dict.
+- Half-days: out of scope (hardcoded 09:30/16:00).
 
 ## Workflow / conventions
 - One branch per section. Branch off main → implement → **manual test** →
@@ -94,16 +103,15 @@ Branch: `feat/close-color-deltas` (exists, 1 commit ahead of pre-rebase main; WI
 - Status only renders after clicking **Predict** (runs `yf.download` — live
   network, can lag/flake).
 - Manual UI states via `MARKET_NOW`:
-  `$env:MARKET_NOW="2026-06-13T08:00"; <venv>/streamlit.exe run stock_predictors.py`
+  `$env:MARKET_NOW="2026-06-13T08:00"; venv/Scripts/streamlit.exe run stock_predictors.py`
   Other states: `T12:00` open, `T17:00` after-close, `2026-05-25T10:00` Memorial Day.
-- **Worktree teardown:** Streamlit holds the worktree directory open. Kill the
-  process by port before `git worktree remove`:
+- **Worktree teardown:** Streamlit holds the worktree directory open. Kill by
+  port before `git worktree remove`:
   ```powershell
   netstat -ano | findstr ":8502" | ForEach-Object { ($_ -split '\s+')[-1] } | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
   git worktree remove "C:/Users/User/StockPredictors-<branch>" --force
   git branch -d <branch>
   ```
+- Rebased feature branches need `git push --force-with-lease` (not plain push).
 - `.opencode/`, `.kilo/` untracked directories — leave them (not part of project).
-- `requirements.txt` is duplicated (merge artifact) — not yet cleaned.
 - Stray local branch `feature/improve-grid-layout` exists (pre-existing, leave it).
-- `CLAUDE.md` added to project root this session — venv path + worktree teardown recipe.
