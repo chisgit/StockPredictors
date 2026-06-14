@@ -23,26 +23,31 @@ def generate_market_status_header(status, last_date_str, today_is_trading_day=Tr
     trading-day-after-close case from the weekend/holiday case, which
     market_status() collapses into one status.
     """
+    subtitle = ""
     if status == "MARKET_OPEN":
         icon, title = "🔔", "Live — Last Traded"
     elif status == "BEFORE_MARKET_OPEN":
-        icon = "🔴"
-        title = f"Market Closed - Displaying Predictions for {last_date_str}"
+        icon, title = "🔴", "Market Closed"
+        subtitle = f"Displaying Predictions for {last_date_str}"
     elif status == "AFTER_MARKET_CLOSE":
         icon = "🔴"
         if today_is_trading_day:
             title = "Today's Close Predictions and Actuals"
         else:
-            title = (
-                "Market Closed Weekend/Holiday - Displaying Predictions for "
-                f"{last_date_str}"
-            )
+            title = "Market Closed Weekend/Holiday"
+            subtitle = f"Displaying Predictions for {last_date_str}"
     else:
         raise ValueError(f"Unknown market status: {status}")
 
+    # subtitle ~65% of title size (1.05rem vs 1.6rem), dark grey
+    subtitle_html = (
+        f"<div style='font-size: 1.05rem; color: #555555; margin-top: -4px;'>{subtitle}</div>"
+        if subtitle else ""
+    )
     return (
-        "<div style='text-align: left; margin-bottom: 8px;'>"
-        f"<h3 style='margin: 0;'>{icon} {title}</h3>"
+        "<div style='text-align: center; margin-bottom: 8px;'>"
+        f"<h3 style='margin: 0; font-size: 1.6rem;'>{icon} {title}</h3>"
+        f"{subtitle_html}"
         "</div>"
     )
 

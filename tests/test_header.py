@@ -25,7 +25,11 @@ DATE = "Friday, June 12"
 def test_before_open_shows_last_traded_date():
     html = generate_market_status_header("BEFORE_MARKET_OPEN", DATE)
     assert "🔴" in html
-    assert f"Market Closed - Displaying Predictions for {DATE}" in html
+    # status title on its own line; date in a separate dark-grey subtitle (no dash)
+    assert "Market Closed" in html
+    assert f"Displaying Predictions for {DATE}" in html
+    assert "color: #555555" in html
+    assert " - Displaying" not in html
 
 
 def test_market_open_live_no_date():
@@ -50,13 +54,15 @@ def test_after_close_weekend_holiday_shows_last_traded_date():
         "AFTER_MARKET_CLOSE", DATE, today_is_trading_day=False
     )
     assert "🔴" in html
-    assert f"Market Closed Weekend/Holiday - Displaying Predictions for {DATE}" in html
+    assert "Market Closed Weekend/Holiday" in html
+    assert f"Displaying Predictions for {DATE}" in html
+    assert " - Displaying" not in html
 
 
-def test_header_is_left_aligned_single_block():
+def test_header_is_centered_single_block():
     html = generate_market_status_header("AFTER_MARKET_CLOSE", DATE)
-    assert "text-align: left" in html
-    assert "text-align: center" not in html
+    assert "text-align: center" in html
+    assert "text-align: left" not in html
     # one header element, not a stacked date <h2> + <h3>
     assert html.count("<h3") == 1
     assert "<h2" not in html
