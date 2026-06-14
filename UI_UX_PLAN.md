@@ -14,7 +14,7 @@ first because every header and stats decision branches off it.
 | — | gitignore `*_data.csv` | direct to main | ✅ merged (76a34cd) |
 | §1 | Single status-driven header | `feat/single-header` | ✅ merged (PR #10) |
 | — | §1 header style polish (2-line centered, grey subtitle, tight gap) | `feat/header-style`, `fix/header-gap` | ✅ merged (PR #11, #12) |
-| §3 | Grouped, status-aware stats panel | `feat/stats-panel` | ⏭ next |
+| §3 | Grouped, status-aware stats panel | `feat/stats-panel` | 🔄 in progress |
 | §2 | Two prediction model cards | `feat/prediction-cards` | todo |
 | §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | todo |
 | §6 | Strip chart chrome | `feat/chart-chrome` | todo |
