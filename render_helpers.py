@@ -114,14 +114,15 @@ def display_tradingview_chart_from_data(ticker, latest_data):
         )
 
     chart_json = str(rows).replace("'", '"')
-    widget_html = f"""
+    components.html(generate_chart_widget_html(ticker, chart_json), height=500, scrolling=False)
+
+
+def generate_chart_widget_html(ticker, chart_json):
+    """Build TradingView chart HTML. Pure function for testability."""
+    return f"""
     <div style="margin: 8px 0 18px 0; border: 1px solid rgba(51,65,85,0.8); border-radius: 18px; overflow: hidden; box-shadow: 0 16px 36px rgba(2,6,23,0.35); background: linear-gradient(180deg, #0f172a 0%, #111827 100%);">
       <div style="padding: 14px 16px; border-bottom: 1px solid rgba(148,163,184,0.14); display: flex; justify-content: space-between; align-items: center; gap: 12px; background: linear-gradient(90deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92));">
-        <div>
-          <div style="font-size: 0.72em; letter-spacing: 0.16em; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">TradingView Style Chart</div>
-          <div style="font-weight: 800; font-size: 1.1em; color: #f8fafc;">{ticker.upper()} · Last 10 Trading Days</div>
-        </div>
-        <div style="font-size: 0.85em; color: #cbd5e1;">OHLC candles from local market data</div>
+        <div style="font-weight: 800; font-size: 1.1em; color: #f8fafc;">{ticker.upper()} · Last 10 Trading Days</div>
       </div>
       <div id="tv_chart_{ticker}" style="height: 420px; width: 100%;"></div>
     </div>
@@ -184,7 +185,6 @@ def display_tradingview_chart_from_data(ticker, latest_data):
       }})();
     </script>
     """
-    components.html(widget_html, height=500, scrolling=False)
 
 
 def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, volume, session_date=None):
