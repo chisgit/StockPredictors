@@ -1,6 +1,6 @@
-# PROGRESS — session handoff
+# HANDOFF — session handoff
 
-Updated: 2026-06-13 · Branch: `main` @ `60ca1f0` · Working tree: clean
+Updated: 2026-06-13 · Branch: `main` @ `6b700ad` · Working tree: clean
 
 ## What this work is
 Executing the UI/UX rework in [UI_UX_PLAN.md](UI_UX_PLAN.md) — fixing the
