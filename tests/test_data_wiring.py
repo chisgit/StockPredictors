@@ -1,79 +1,49 @@
-"""Isolated tests for §1f data-wiring — before-open prediction accuracy caption.
+"""Isolated tests for §1f/§1f-δ — prediction card delta label.
 
-Locks: _session_ref_caption() emits the correct text for the closed-market
-accuracy recap shown below prediction strips.
+Locks: _delta_caption(is_open) emits the correct inline label shown
+left of the price diff in each model card.
 
 State contract:
-  MARKET_OPEN        → no caption (not tested here — caption omitted in caller)
-  BEFORE_MARKET_OPEN → caption with session date + actual close
-  AFTER_MARKET_CLOSE → caption with session date + actual close
+  MARKET_OPEN  → "Δ from last traded"
+  closed       → "Δ from close"
 """
-from datetime import date
-
-import pytest
-
-from render_ui import _session_ref_caption
+from render_ui import _delta_caption
 
 
-FRIDAY = date(2026, 6, 12)
-MONDAY = date(2026, 6, 15)
-CLOSE = 188.50
+def test_closed_market_label():
+    assert _delta_caption(is_open=False) == "Δ from close"
 
 
-# --- caption content ---------------------------------------------------------
-
-def test_caption_includes_delta_symbol():
-    text = _session_ref_caption(FRIDAY, CLOSE)
-    assert "Δ" in text
+def test_open_market_label():
+    assert _delta_caption(is_open=True) == "Δ from last traded"
 
 
-def test_caption_includes_actual_close_label():
-    text = _session_ref_caption(FRIDAY, CLOSE)
-    assert "actual close" in text
+def test_closed_contains_delta_symbol():
+    assert "Δ" in _delta_caption(is_open=False)
 
 
-def test_caption_includes_close_price():
-    text = _session_ref_caption(FRIDAY, CLOSE)
-    assert "$188.50" in text
+def test_open_contains_delta_symbol():
+    assert "Δ" in _delta_caption(is_open=True)
 
 
-def test_caption_includes_weekday():
-    text = _session_ref_caption(FRIDAY, CLOSE)
-    assert "Friday" in text
+def test_closed_contains_from():
+    assert "from" in _delta_caption(is_open=False)
 
 
-def test_caption_includes_month_and_day():
-    text = _session_ref_caption(FRIDAY, CLOSE)
-    assert "Jun 12" in text
+def test_open_contains_from():
+    assert "from" in _delta_caption(is_open=True)
 
 
-# --- different session dates -------------------------------------------------
-
-def test_caption_monday_date():
-    text = _session_ref_caption(MONDAY, 200.00)
-    assert "Monday" in text
-    assert "Jun 15" in text
+def test_labels_are_distinct():
+    assert _delta_caption(is_open=False) != _delta_caption(is_open=True)
 
 
-def test_caption_close_formats_two_decimals():
-    text = _session_ref_caption(FRIDAY, 99.9)
-    assert "$99.90" in text
+def test_no_price_value_in_label():
+    for label in (_delta_caption(True), _delta_caption(False)):
+        assert "$" not in label
 
 
-def test_caption_large_close():
-    text = _session_ref_caption(FRIDAY, 1234.56)
-    assert "$1234.56" in text
-
-
-# --- round-trip check --------------------------------------------------------
-
-@pytest.mark.parametrize("session_date,close", [
-    (date(2026, 1, 2), 150.00),   # Friday (New Year's Day observed — first trading day)
-    (date(2026, 3, 27), 210.75),  # Friday
-    (date(2026, 11, 25), 88.30),  # Wednesday before Thanksgiving
-])
-def test_caption_parametrized(session_date, close):
-    text = _session_ref_caption(session_date, close)
-    assert "Δ" in text
-    assert "actual close" in text
-    assert f"${close:.2f}" in text
+def test_no_date_in_label():
+    for label in (_delta_caption(True), _delta_caption(False)):
+        assert "Jun" not in label
+        assert "2026" not in label
