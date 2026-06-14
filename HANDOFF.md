@@ -1,6 +1,6 @@
 # HANDOFF — session handoff
 
-Updated: 2026-06-13 · Branch: `main` @ `2eb062e` · Working tree: dirty (untracked: `.opencode/`, `before_predict.png`, `screenshot.png`, `take_screenshot.py`)
+Updated: 2026-06-13 · Branch: `main` @ `9137123` · Working tree: dirty (untracked: `.opencode/`, `before_predict.png`, `screenshot.png`, `take_screenshot.py`)
 
 ## What this work is
 Executing the UI/UX rework in [UI_UX_PLAN.md](UI_UX_PLAN.md) — fixing the
@@ -40,7 +40,7 @@ git worktree add "..\StockPredictors-<branch-slug>" <branch-name>
   stats grid) + [display_market_status.py](display_market_status.py) (header).
 - Market status: [utils.py](utils.py) `market_status()` / `is_trading_day()` /
   `next_trading_day()`.
-- Tests: `<venv>/python.exe -m pytest tests/ -q` (40 passing on main).
+- Tests: `<venv>/python.exe -m pytest tests/ -q` (57 passing on main).
 
 ## Done (merged to main)
 - **§0** holiday/weekend-aware `market_status()` (PR #8) + `MARKET_NOW` env
@@ -64,6 +64,11 @@ git worktree add "..\StockPredictors-<branch-slug>" <branch-name>
   Removed "TradingView Style Chart" eyebrow + "OHLC candles" caption.
   Extracted `generate_chart_widget_html(ticker, chart_json)` — pure fn.
   Tests [tests/test_chart_chrome.py](tests/test_chart_chrome.py) (6 cases).
+- **§1f** before-open prediction-vs-actual data wiring (PR #15).
+  `display_results()` now resolves `market_status()` once; when not open,
+  shows caption under each prediction strip: "Δ vs Friday, Jun 12 actual close · $X".
+  Pure helper `_session_ref_caption(session_date, actual_close)` in `render_ui.py`.
+  Tests [tests/test_data_wiring.py](tests/test_data_wiring.py) (11 cases).
 
 ## Key domain fact
 Today-target models use **today's intraday OHLCV** as features
@@ -90,29 +95,18 @@ Implementation complete, **awaiting manual test sign-off + commit**.
 ## Concurrency map — remaining work
 
 ```
-main (§0✅ §1✅ §3✅ §6✅)
+main (§0✅ §1✅ §1f✅ §3✅ §6✅)
 │
-├── §2  feat/prediction-cards  render_helpers.py:61-90  🔄 IN PROGRESS (worktree ready)
-└── data-wiring (render_ui.py only)                       unclaimed
+└── §2  feat/prediction-cards  render_helpers.py:61-90  🔄 IN PROGRESS (worktree ready)
         │
         └── §4+§5  feat/close-color-deltas  (after §2 merges)
                 │
                 └── §7  feat/dark-theme-toggle  (last — after §2 §4+§5)
 ```
 
-### Parallel-safe (non-overlapping files/lines off same main)
-- **data-wiring** — unclaimed, touches `render_ui.py` only. Safe to start now.
-
 ### Sequential gates
 - **§4+§5 after §2** — §5 applies to the new cards §2 creates.
 - **§7 last** — final theme pass over completed markup.
-
-## ⚠️ Open follow-up (own branch — user's call)
-**Before-open prediction-vs-actual data wiring.** §1 fixed header labels only.
-To make "Displaying Predictions for `<Friday>`" pair Friday's prediction vs
-Friday's actual close, change [render_ui.py](render_ui.py) `display_results()`
-to feed last-session prediction + actual to main section when
-`market_status() != MARKET_OPEN`. See UI_UX_PLAN.md §1 "Follow-up".
 
 ## Decisions locked (see UI_UX_PLAN.md "Resolved Decisions")
 - Calendar lib: `pandas_market_calendars` (XNYS), offline.
