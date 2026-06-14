@@ -17,7 +17,8 @@ first because every header and stats decision branches off it.
 | §3 | Grouped, status-aware stats panel | `feat/stats-panel` | ✅ merged (PR #13) |
 | §2 | Two prediction model cards | `feat/prediction-cards` | ✅ merged (PR #16) |
 | §1f | Before-open prediction-vs-actual data wiring | `feat/data-wiring` | ✅ merged (PR #15) |
-| §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | todo |
+| §1f-δ | Inline Δ label on prediction cards (replace redundant caption) | `feat/delta-label` | ✅ merged (PR #17) |
+| §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | 🔄 in progress |
 | §6 | Strip chart chrome | `feat/chart-chrome` | ✅ merged (PR #14) |
 | §7 | Dark theme + light toggle | `feat/dark-theme-toggle` | todo |
 
