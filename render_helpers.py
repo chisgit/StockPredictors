@@ -4,6 +4,71 @@ import streamlit.components.v1 as components
 from utils import market_status
 
 
+THEME = {
+    "dark": {
+        "card_bg": "linear-gradient(180deg, #1e293b, #0f172a)",
+        "card_border": "rgba(148,163,184,0.18)",
+        "card_shadow": "0 8px 24px rgba(0,0,0,0.25)",
+        "text_price": "#f8fafc",
+        "text_model_label": "#94a3b8",
+        "text_delta_label": "#64748b",
+        "metric_label": "#94a3b8",
+        "metric_emphasis": "#cbd5e1",
+        "section_bg": "#111827",
+        "section_border": "rgba(148,163,184,0.12)",
+        "section_shadow": "0 4px 16px rgba(0,0,0,0.2)",
+        "ticker_color": "#f8fafc",
+        "divider_grad": "linear-gradient(90deg, rgba(148,163,184,0.2), transparent)",
+        "chart_bg": "#0f172a",
+        "chart_text": "#cbd5e1",
+        "chart_grid": "rgba(148,163,184,0.08)",
+        "chart_border": "rgba(148,163,184,0.18)",
+        "close_up": "#4ade80",
+        "close_down": "#f87171",
+        "close_neutral": "#94a3b8",
+        "delta_up": "#4CAF50",
+        "delta_down": "#FF5252",
+        "delta_neutral": "#475569",
+    },
+    "light": {
+        "card_bg": "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,252,0.9))",
+        "card_border": "rgba(148,163,184,0.18)",
+        "card_shadow": "0 8px 24px rgba(15,23,42,0.06)",
+        "text_price": "#0f172a",
+        "text_model_label": "#475569",
+        "text_delta_label": "#94a3b8",
+        "metric_label": "#475569",
+        "metric_emphasis": "#334155",
+        "section_bg": "#f1f5f9",
+        "section_border": "rgba(148,163,184,0.18)",
+        "section_shadow": "0 4px 16px rgba(15,23,42,0.04)",
+        "ticker_color": "#0f172a",
+        "divider_grad": "linear-gradient(90deg, rgba(148,163,184,0.3), transparent)",
+        "chart_bg": "#ffffff",
+        "chart_text": "#334155",
+        "chart_grid": "rgba(148,163,184,0.2)",
+        "chart_border": "rgba(148,163,184,0.3)",
+        "close_up": "#166534",
+        "close_down": "#991b1b",
+        "close_neutral": "#475569",
+        "delta_up": "#4CAF50",
+        "delta_down": "#FF5252",
+        "delta_neutral": "#475569",
+    },
+}
+
+
+def _resolve_theme(theme_name):
+    if theme_name is not None:
+        return THEME.get(theme_name, THEME["light"])
+    try:
+        name = st.session_state.get("theme", "light")
+    except Exception:
+        name = "light"
+    return THEME.get(name, THEME["light"])
+
+
+@st.cache_data(ttl=300)
 def get_recent_data(ticker):
     """Download recent stock data for the given ticker."""
     try:
@@ -58,21 +123,21 @@ def extract_and_format_ticker_data(latest_data):
     return formatted_data
 
 
-def _model_card_html(model_name, predicted_price, delta, delta_color, delta_sign, delta_label):
+def _model_card_html(model_name, predicted_price, delta, delta_color, delta_sign, delta_label, t):
     return (
-        '<div style="flex: 1; min-width: 160px; padding: 16px; border-radius: 14px; '
-        'border: 1px solid rgba(148,163,184,0.18); '
-        'background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,252,0.9)); '
-        'box-shadow: 0 8px 24px rgba(15,23,42,0.06); text-align: center;">'
+        f'<div style="flex: 1; min-width: 160px; padding: 16px; border-radius: 14px; '
+        f'border: 1px solid {t["card_border"]}; '
+        f'background: {t["card_bg"]}; '
+        f'box-shadow: {t["card_shadow"]}; text-align: center;">'
         f'<div style="font-size: 0.76em; font-weight: 700; letter-spacing: 0.08em; '
-        f'text-transform: uppercase; color: #475569; margin-bottom: 8px;">{model_name}</div>'
-        f'<div style="font-size: 1.5em; font-weight: 800; color: #0f172a; line-height: 1.2; '
+        f'text-transform: uppercase; color: {t["text_model_label"]}; margin-bottom: 8px;">{model_name}</div>'
+        f'<div style="font-size: 1.5em; font-weight: 800; color: {t["text_price"]}; line-height: 1.2; '
         f'margin-bottom: 4px;">${predicted_price:.2f}</div>'
         f'<div style="display: flex; align-items: center; justify-content: center; gap: 5px;">'
-        f'<span style="font-size: 0.7em; font-weight: 600; color: #94a3b8; white-space: nowrap;">{delta_label}</span>'
+        f'<span style="font-size: 0.7em; font-weight: 600; color: {t["text_delta_label"]}; white-space: nowrap;">{delta_label}</span>'
         f'<span style="font-size: 1.05em; font-weight: 700; color: {delta_color};">({delta_sign}${abs(delta):.2f})</span>'
         f'</div>'
-        '</div>'
+        f'</div>'
     )
 
 
@@ -84,34 +149,35 @@ def _prediction_cards_container_html(cards_html):
     )
 
 
-def generate_prediction_cards_html(predictions, current_val, delta_label):
+def generate_prediction_cards_html(predictions, current_val, delta_label, theme_name=None):
     """Build HTML for two side-by-side model prediction cards."""
+    t = _resolve_theme(theme_name)
     cards_html = ""
     for i, prediction in enumerate(predictions):
         model_name = "Linear Regression" if i == 0 else "XGBoost"
         delta = prediction - current_val
         if delta > 0:
-            delta_color = "#4CAF50"
+            delta_color = t["delta_up"]
             delta_sign = "+"
         elif delta < 0:
-            delta_color = "#FF5252"
+            delta_color = t["delta_down"]
             delta_sign = "-"
         else:
-            delta_color = "#475569"
+            delta_color = t["delta_neutral"]
             delta_sign = ""
-        cards_html += _model_card_html(model_name, prediction, delta, delta_color, delta_sign, delta_label)
+        cards_html += _model_card_html(model_name, prediction, delta, delta_color, delta_sign, delta_label, t)
     return _prediction_cards_container_html(cards_html)
 
 
-def display_predictions(predictions, current_val, delta_label):
+def display_predictions(predictions, current_val, delta_label, theme_name=None):
     """Display predictions as two side-by-side model cards."""
     st.markdown(
-        generate_prediction_cards_html(predictions, current_val, delta_label),
+        generate_prediction_cards_html(predictions, current_val, delta_label, theme_name),
         unsafe_allow_html=True,
     )
 
 
-def display_tradingview_chart_from_data(ticker, latest_data):
+def display_tradingview_chart_from_data(ticker, latest_data, theme_name=None):
     """Render a TradingView Lightweight Charts candlestick chart from local OHLC data."""
     if latest_data is None or latest_data.empty:
         st.warning(f"No chart data available for {ticker}.")
@@ -135,17 +201,18 @@ def display_tradingview_chart_from_data(ticker, latest_data):
         )
 
     chart_json = str(rows).replace("'", '"')
-    components.html(generate_chart_widget_html(ticker, chart_json), height=500, scrolling=False)
+    components.html(generate_chart_widget_html(ticker, chart_json, theme_name), height=500, scrolling=False)
 
 
-def generate_chart_widget_html(ticker, chart_json):
+def generate_chart_widget_html(ticker, chart_json, theme_name=None):
     """Build TradingView chart HTML. Pure function for testability."""
+    t = _resolve_theme(theme_name)
     return f"""
     <div>
       <div style="padding: 14px 16px; border-bottom: 1px solid rgba(148,163,184,0.14); display: flex; justify-content: space-between; align-items: center; gap: 12px; background: linear-gradient(90deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92)); border-radius: 18px 18px 0 0;">
         <div style="font-weight: 800; font-size: 1.1em; color: #f8fafc;">{ticker.upper()} · Last 10 Trading Days</div>
       </div>
-      <div id="tv_chart_{ticker}" style="height: 420px; width: 100%; background: #0f172a; border-radius: 0 0 18px 18px;"></div>
+      <div id="tv_chart_{ticker}" style="height: 420px; width: 100%; background: {t["chart_bg"]}; border-radius: 0 0 18px 18px;"></div>
     </div>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script>
@@ -159,18 +226,18 @@ def generate_chart_widget_html(ticker, chart_json):
         }}
         const chart = LightweightCharts.createChart(container, {{
           layout: {{
-            background: {{ color: '#0f172a' }},
-            textColor: '#cbd5e1',
+            background: {{ color: '{t["chart_bg"]}' }},
+            textColor: '{t["chart_text"]}',
           }},
           grid: {{
-            vertLines: {{ color: 'rgba(148,163,184,0.08)' }},
-            horzLines: {{ color: 'rgba(148,163,184,0.08)' }},
+            vertLines: {{ color: '{t["chart_grid"]}' }},
+            horzLines: {{ color: '{t["chart_grid"]}' }},
           }},
           rightPriceScale: {{
-            borderColor: 'rgba(148,163,184,0.18)',
+            borderColor: '{t["chart_border"]}',
           }},
           timeScale: {{
-            borderColor: 'rgba(148,163,184,0.18)',
+            borderColor: '{t["chart_border"]}',
             timeVisible: false,
             secondsVisible: false,
           }},
@@ -208,19 +275,22 @@ def generate_chart_widget_html(ticker, chart_json):
     """
 
 
-def _close_color(close_val, prev_close_val):
+def _close_color(close_val, prev_close_val, theme_name=None):
+    t = _resolve_theme(theme_name)
     if close_val > prev_close_val:
-        return "#166534"
+        return t["close_up"]
     if close_val < prev_close_val:
-        return "#991b1b"
-    return "#475569"
+        return t["close_down"]
+    return t["close_neutral"]
 
 
-def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, volume, session_date=None):
+def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, volume, session_date=None, theme_name=None):
+    t = _resolve_theme(theme_name)
+
     def format_price(value):
         return f"${value:,.2f}"
 
-    close_val_color = _close_color(close_val, prev_close_val)
+    close_val_color = _close_color(close_val, prev_close_val, theme_name)
 
     metrics = [
         "Open",
@@ -239,18 +309,15 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
         f"{int(volume):,}",
     ]
 
-    NEUTRAL_BG = "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.9))"
-    NEUTRAL_BORDER = "rgba(148,163,184,0.18)"
-
     grid_items = []
     for metric, value in zip(metrics, values):
         is_emphasis = metric in ("Prev Close", "Last Traded", "Close")
-        card_bg = NEUTRAL_BG
-        card_border = NEUTRAL_BORDER
-        value_color = close_val_color if metric in ("Last Traded", "Close") else "#0f172a"
-        metric_color = "#475569" if not is_emphasis else "#334155"
+        card_bg = t["card_bg"]
+        card_border = t["card_border"]
+        value_color = close_val_color if metric in ("Last Traded", "Close") else t["text_price"]
+        metric_color = t["metric_label"] if not is_emphasis else t["metric_emphasis"]
         grid_items.append(
-            f'<div style="position: relative; overflow: hidden; padding: 14px 14px 13px; border-radius: 16px; border: 1px solid {card_border}; background: {card_bg}; box-shadow: 0 10px 24px rgba(15,23,42,0.05); text-align: left;">'
+            f'<div style="position: relative; overflow: hidden; padding: 14px 14px 13px; border-radius: 16px; border: 1px solid {card_border}; background: {card_bg}; box-shadow: {t["card_shadow"]}; text-align: left;">'
             f'<div style="font-size: 0.76em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: {metric_color}; margin-bottom: 8px;">{metric}</div>'
             f'<div style="font-size: 1.08em; font-weight: 800; color: {value_color}; line-height: 1.1;">{format_price(value) if metric != "Volume" else value}</div>'
             f'</div>'
@@ -262,6 +329,28 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
         'margin: 8px 0 2px 0;">'
         + ''.join(grid_items)
         + '</div>'
+    )
+
+
+def section_container_html(theme_name=None):
+    """Return open-tag HTML for a ticker section container. Always dark to match Streamlit chrome."""
+    dark = THEME["dark"]
+    return (
+        f'<div style="border: 1px solid {dark["section_border"]}; border-radius: 20px; '
+        f'padding: 18px 18px 16px; margin: 20px 0 14px 0; '
+        f'background: {dark["section_bg"]}; box-shadow: {dark["section_shadow"]};">'
+    )
+
+
+def ticker_header_html(ticker, theme_name=None):
+    """Return HTML for the ticker name + accent bar row. Always light text on dark section bg."""
+    dark = THEME["dark"]
+    return (
+        f'<div style="display: flex; align-items: center; gap: 10px;">'
+        f'<div style="width: 4px; height: 22px; background: #3b82f6; border-radius: 3px;"></div>'
+        f'<span style="font-size: 1.15em; font-weight: 800; color: {dark["ticker_color"]};">{ticker}</span>'
+        f'<div style="flex: 1; height: 1px; background: {dark["divider_grad"]};"></div>'
+        f'</div>'
     )
 
 
