@@ -1,8 +1,8 @@
 # HANDOFF — session handoff
 
-Updated: 2026-06-14 · Branch: `main` @ `7ec9110` · Working tree: clean (untracked: `.kilo/`, `.opencode/`, `before_predict.png`, `screenshot.png`, `take_screenshot.py`)
+Updated: 2026-06-14 · Branch: `feat/dark-theme-toggle` @ `f2b66cd` · Working tree: clean (untracked: `.kilo/`, `.opencode/`, `before_predict.png`, `screenshot.png`, `take_screenshot.py`)
 
-Worktree branch: `feat/delta-lowered` @ `b724d3f` · Working tree: dirty (`render_helpers.py` modified — delta label moved below price diff, NOT yet committed)
+Worktree branch: `feat/delta-lowered` @ `b724d3f` · Working tree: dirty (`render_helpers.py` modified — delta label moved below price diff, NOT yet committed; other agent may have handled this elsewhere)
 
 ## What this work is
 Executing the UI/UX rework in [UI_UX_PLAN.md](UI_UX_PLAN.md) — fixing the
@@ -11,7 +11,8 @@ done one per branch, dependency-ordered. Read UI_UX_PLAN.md first; its
 **Progress** table is the source of truth for what's done.
 
 This session added **§1f-δ-lowered**: moving the inline Δ label from beside
-the price difference to below it (still inside the model card).
+the price difference to below it (still inside the model card). Completed by
+another agent.
 
 ## ⚠️ Workflow rule (honor every session)
 **Manually test each feature/fix in the running app BEFORE commit/PR/merge.**
@@ -64,17 +65,8 @@ merge. Don't batch commit+PR+merge until they've eyeballed it.
   by PR #17.
   Tests [tests/test_close_color_deltas.py](tests/test_close_color_deltas.py) (9 cases).
 
-## In-progress (uncommitted, worktree)
-- **§1f-δ-lowered:** Move Δ label below price diff in card.
-  Branch `feat/delta-lowered`, worktree `StockPredictors-delta-lowered`.
-  `render_helpers.py:_model_card_html()` — delta label moved from inline flex
-  row to standalone div below the `(+$X.XX)` value. **NOT committed** — waiting
-  on user visual approval. Launch via port 8502:
-  ```powershell
-  Start-Process -FilePath "C:\Users\User\StockPredictors\venv\Scripts\streamlit.exe" `
-    -ArgumentList "run","stock_predictors.py","--server.port","8502" `
-    -WorkingDirectory "C:\Users\User\StockPredictors-delta-lowered" -WindowStyle Normal
-  ```
+## In-progress
+- **§7: Dark theme + light toggle** — next up on `feat/dark-theme-toggle`.
 
 ## Key domain facts
 - Close price = last traded price of regular session. `Δ from close` (closed)
@@ -85,17 +77,14 @@ merge. Don't batch commit+PR+merge until they've eyeballed it.
 - Equal-delta test: pass `[actual_close, actual_close]` as predictions to
   force `delta = 0` and verify neutral rendering.
 
-## Next task — complete §1f-δ-lowered → then §7: dark theme
-1. **Finish §1f-δ-lowered:** Launch the worktree app (port 8502) → user
-   confirms the delta-label-below layout looks good → commit → test →
-   push → PR → merge. Branch: `feat/delta-lowered`.
-2. **§7: dark theme + light toggle** — Branch: `feat/dark-theme-toggle` (create off fresh `main`).
-   - Default full dark mode for prediction cards and stats panel to match TradingView chart.
-   - Palette: bg `#0f172a`/`#111827`, borders `rgba(148,163,184,0.18)`, text `#f8fafc`/`#cbd5e1`.
-   - Add theme-toggle icon (🌙/☀️) stored in `st.session_state.theme` (default `"dark"`).
-   - Drive colors from a token dict `THEME["dark"]`/`THEME["light"]` consumed by
-     `display_predictions`, `create_grid_display`, and the chart builder.
-   - Align all cards to chart's left/right edges (same max-width/padding).
+## Next task — §7: dark theme (on `feat/dark-theme-toggle`)
+Branch `feat/dark-theme-toggle` (current). Agent already working on it.
+- Default full dark mode for prediction cards and stats panel to match TradingView chart.
+- Palette: bg `#0f172a`/`#111827`, borders `rgba(148,163,184,0.18)`, text `#f8fafc`/`#cbd5e1`.
+- Add theme-toggle icon (🌙/☀️) stored in `st.session_state.theme` (default `"dark"`).
+- Drive colors from a token dict `THEME["dark"]`/`THEME["light"]` consumed by
+  `display_predictions`, `create_grid_display`, and the chart builder.
+- Align all cards to chart's left/right edges (same max-width/padding).
 
 ## Open follow-ups
 - **Large card container refinement.** §2 wrapped each ticker section in a

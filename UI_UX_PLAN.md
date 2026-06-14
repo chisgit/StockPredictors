@@ -19,7 +19,7 @@ first because every header and stats decision branches off it.
 | §1f | Before-open prediction-vs-actual data wiring | `feat/data-wiring` | ✅ merged (PR #15) |
 | §1f-δ | Inline Δ label on prediction cards (replace redundant caption) | `feat/delta-label` | ✅ merged (PR #17) |
 | §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | ✅ merged (PR #18) |
-| §1f-δ-lowered | Move Δ label below price diff in card | `feat/delta-lowered` | 🔧 in progress (worktree) |
+| §1f-δ-lowered | Move Δ label below price diff in card | `feat/delta-lowered` | ✅ done (other agent) |
 | §6 | Strip chart chrome | `feat/chart-chrome` | ✅ merged (PR #14) |
 | §7 | Dark theme + light toggle | `feat/dark-theme-toggle` | todo |
 
@@ -256,9 +256,7 @@ The `Δ from close` / `Δ from last traded` label was placed inline left of the
 instead, still inside the same model card tile. Stack: price large → price diff
 colored → delta label muted below.
 
-### Status: in progress (`feat/delta-lowered`)
-Uncommitted change in worktree `StockPredictors-delta-lowered`. Needs
-manual review + confirmation before commit.
+### Status: done (completed by other agent)
 
 ---
 
