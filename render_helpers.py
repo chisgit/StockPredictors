@@ -187,9 +187,11 @@ def display_tradingview_chart_from_data(ticker, latest_data):
     components.html(widget_html, height=500, scrolling=False)
 
 
-def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, volume):
+def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, volume, session_date=None):
     def format_price(value):
         return f"${value:,.2f}"
+
+    status = market_status()
 
     close_is_up = close_val >= prev_close_val
     close_bg = "rgba(34,197,94,0.12)" if close_is_up else "rgba(239,68,68,0.12)"
@@ -201,7 +203,7 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
         "High",
         "Low",
         "Prev Close",
-        "Last Traded" if market_status() == "MARKET_OPEN" else "Close",
+        "Last Traded" if status == "MARKET_OPEN" else "Close",
         "Volume",
     ]
     values = [
@@ -227,13 +229,25 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
             f'</div>'
         )
 
-    html = (
-        '<div style="margin: 8px 0 2px 0; display: grid; '
+    if status == "MARKET_OPEN":
+        panel_header = "Today's Data"
+    else:
+        panel_header = session_date.strftime('%A, %B %d') if session_date else "Last Session"
+
+    grid = (
+        '<div style="display: grid; '
         'grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px;">'
         + ''.join(grid_items)
         + '</div>'
     )
-    return html
+    return (
+        '<div style="border: 1px solid rgba(148,163,184,0.25); border-radius: 18px; '
+        'padding: 16px 16px 14px; margin: 8px 0 2px 0;">'
+        f'<div style="font-size: 0.78em; font-weight: 700; letter-spacing: 0.06em; '
+        f'text-transform: uppercase; color: #475569; margin-bottom: 10px;">{panel_header}</div>'
+        + grid
+        + '</div>'
+    )
 
 
 def search_and_add_ticker(new_ticker):

@@ -95,6 +95,7 @@ def display_results(predictions):
                 formatted_data["Prev Close"],
                 formatted_data["Close"],
                 formatted_data["Volume"],
+                session_date=last_available_date,
             )
             st.markdown(grid_html, unsafe_allow_html=True)
 
