@@ -58,34 +58,46 @@ def extract_and_format_ticker_data(latest_data):
     return formatted_data
 
 
-def preds_sameline(predictions, current_val):
-    predictions_html = ""
+def _model_card_html(model_name, predicted_price, delta, delta_color, delta_sign):
+    return (
+        '<div style="flex: 1; min-width: 160px; padding: 16px; border-radius: 14px; '
+        'border: 1px solid rgba(148,163,184,0.18); '
+        'background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,252,0.9)); '
+        'box-shadow: 0 8px 24px rgba(15,23,42,0.06); text-align: center;">'
+        f'<div style="font-size: 0.76em; font-weight: 700; letter-spacing: 0.08em; '
+        f'text-transform: uppercase; color: #475569; margin-bottom: 8px;">{model_name}</div>'
+        f'<div style="font-size: 1.5em; font-weight: 800; color: #0f172a; line-height: 1.2; '
+        f'margin-bottom: 4px;">${predicted_price:.2f}</div>'
+        f'<div style="font-size: 1.05em; font-weight: 700; color: {delta_color};">'
+        f'({delta_sign}${abs(delta):.2f})</div>'
+        '</div>'
+    )
+
+
+def _prediction_cards_container_html(cards_html):
+    return (
+        '<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;">'
+        f'{cards_html}'
+        '</div>'
+    )
+
+
+def generate_prediction_cards_html(predictions, current_val):
+    """Build HTML for two side-by-side model prediction cards."""
+    cards_html = ""
     for i, prediction in enumerate(predictions):
-        model_type = "Linear Regression" if i == 0 else "XGBoost"
-        price_diff = prediction - current_val
-        diff_color = "#4CAF50" if price_diff >= 0 else "#FF5252"
-
-        if price_diff > 0:
-            diff_sign = "+"
-        elif price_diff < 0:
-            diff_sign = "-"
-        else:
-            diff_sign = ""
-
-        diff_str = f'<span style="color: {diff_color}; margin-left: 8px;">({diff_sign}${abs(price_diff):.2f})</span>'
-        predictions_html += f'{model_type}: <span style="font-size: 1.1em;">${prediction:.2f}</span>{diff_str} &nbsp;&nbsp;'
-    return predictions_html
+        model_name = "Linear Regression" if i == 0 else "XGBoost"
+        delta = prediction - current_val
+        delta_color = "#4CAF50" if delta >= 0 else "#FF5252"
+        delta_sign = "+" if delta > 0 else ("-" if delta < 0 else "")
+        cards_html += _model_card_html(model_name, prediction, delta, delta_color, delta_sign)
+    return _prediction_cards_container_html(cards_html)
 
 
-def display_predictions(ticker, predictions_html):
-    """Display predictions for a given ticker."""
+def display_predictions(predictions, current_val):
+    """Display predictions as two side-by-side model cards."""
     st.markdown(
-        f'<div style="margin: 14px 0 8px 0; padding: 12px 14px; border: 1px solid rgba(148,163,184,0.18); border-radius: 14px; background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,250,252,0.96)); box-shadow: 0 8px 24px rgba(15,23,42,0.06);">'
-        f'<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">'
-        f'<span style="font-size: 1.05em; font-weight: 800; letter-spacing: 0.04em; color: #0f172a;">{ticker}</span>'
-        f'<span style="line-height: 1.5;">{predictions_html}</span>'
-        f'</div>'
-        f"</div>",
+        generate_prediction_cards_html(predictions, current_val),
         unsafe_allow_html=True,
     )
 
@@ -120,11 +132,11 @@ def display_tradingview_chart_from_data(ticker, latest_data):
 def generate_chart_widget_html(ticker, chart_json):
     """Build TradingView chart HTML. Pure function for testability."""
     return f"""
-    <div style="margin: 8px 0 18px 0; border: 1px solid rgba(51,65,85,0.8); border-radius: 18px; overflow: hidden; box-shadow: 0 16px 36px rgba(2,6,23,0.35); background: linear-gradient(180deg, #0f172a 0%, #111827 100%);">
-      <div style="padding: 14px 16px; border-bottom: 1px solid rgba(148,163,184,0.14); display: flex; justify-content: space-between; align-items: center; gap: 12px; background: linear-gradient(90deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92));">
+    <div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid rgba(148,163,184,0.14); display: flex; justify-content: space-between; align-items: center; gap: 12px; background: linear-gradient(90deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92)); border-radius: 18px 18px 0 0;">
         <div style="font-weight: 800; font-size: 1.1em; color: #f8fafc;">{ticker.upper()} · Last 10 Trading Days</div>
       </div>
-      <div id="tv_chart_{ticker}" style="height: 420px; width: 100%;"></div>
+      <div id="tv_chart_{ticker}" style="height: 420px; width: 100%; background: #0f172a; border-radius: 0 0 18px 18px;"></div>
     </div>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script>
@@ -191,8 +203,6 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
     def format_price(value):
         return f"${value:,.2f}"
 
-    status = market_status()
-
     close_is_up = close_val >= prev_close_val
     close_bg = "rgba(34,197,94,0.12)" if close_is_up else "rgba(239,68,68,0.12)"
     close_border = "rgba(34,197,94,0.28)" if close_is_up else "rgba(239,68,68,0.28)"
@@ -203,7 +213,7 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
         "High",
         "Low",
         "Prev Close",
-        "Last Traded" if status == "MARKET_OPEN" else "Close",
+        "Last Traded" if market_status() == "MARKET_OPEN" else "Close",
         "Volume",
     ]
     values = [
@@ -229,23 +239,11 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
             f'</div>'
         )
 
-    if status == "MARKET_OPEN":
-        panel_header = "Today's Data"
-    else:
-        panel_header = session_date.strftime('%A, %B %d') if session_date else "Last Session"
-
-    grid = (
-        '<div style="display: grid; '
-        'grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px;">'
-        + ''.join(grid_items)
-        + '</div>'
-    )
     return (
-        '<div style="border: 1px solid rgba(148,163,184,0.25); border-radius: 18px; '
-        'padding: 16px 16px 14px; margin: 8px 0 2px 0;">'
-        f'<div style="font-size: 0.78em; font-weight: 700; letter-spacing: 0.06em; '
-        f'text-transform: uppercase; color: #475569; margin-bottom: 10px;">{panel_header}</div>'
-        + grid
+        '<div style="display: grid; '
+        'grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; '
+        'margin: 8px 0 2px 0;">'
+        + ''.join(grid_items)
         + '</div>'
     )
 
