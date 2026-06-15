@@ -189,3 +189,28 @@ def test_safe_key_sanitizes_special_chars():
 def test_section_css_uses_safe_key():
     css = section_container_css("ticker_section_BRK-B", "dark")
     assert ".st-key-ticker_section_BRK_B" in css
+
+
+# ── DM6 next-day grouping container ──────────────────────────────────────────
+# next-day per-ticker block reuses render_section_container with "next_day_section_"
+# prefix — same CSS/container as DM3, different key namespace.
+
+def test_next_day_section_css_targets_keyed_container():
+    css = section_container_css("next_day_section_AAPL", "dark")
+    assert ".st-key-next_day_section_AAPL" in css
+
+
+def test_next_day_section_css_dark_tokens():
+    css = section_container_css("next_day_section_AAPL", "dark")
+    assert THEME["dark"]["section_bg"] in css
+    assert THEME["dark"]["section_border"] in css
+
+
+def test_next_day_section_css_light_tokens():
+    css = section_container_css("next_day_section_AAPL", "light")
+    assert THEME["light"]["section_bg"] in css
+
+
+def test_next_day_section_safe_key_special_chars():
+    css = section_container_css("next_day_section_BRK-B", "dark")
+    assert ".st-key-next_day_section_BRK_B" in css

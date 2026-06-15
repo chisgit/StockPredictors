@@ -1,6 +1,6 @@
 # Dark Mode — Polish Pass Plan
 
-Status: DM3 done ✅ · DM6 claimed · DM5 in progress · Owner: clpatel · Started: 2026-06-14
+Status: DM3 done ✅ · DM6 done ✅ · palette pass done ✅ · DM4/DM5/DM2/DM1 pending · Owner: clpatel · Started: 2026-06-14
 Branch: `feat/dark-theme-toggle` (all six items land here — see Branching below)
 
 This plan is the §7 follow-through from [UI_UX_PLAN.md](UI_UX_PLAN.md). §7 introduced

@@ -6,7 +6,7 @@ from utils import market_status
 
 THEME = {
     "dark": {
-        "card_bg": "linear-gradient(180deg, #1e293b, #0f172a)",
+        "card_bg": "linear-gradient(180deg, #192638, #0c1728)",
         "card_border": "rgba(148,163,184,0.18)",
         "card_shadow": "0 8px 24px rgba(0,0,0,0.25)",
         "text_price": "#f8fafc",
@@ -14,7 +14,7 @@ THEME = {
         "text_delta_label": "#64748b",
         "metric_label": "#94a3b8",
         "metric_emphasis": "#cbd5e1",
-        "section_bg": "#111827",
+        "section_bg": "#132030",
         "section_border": "rgba(148,163,184,0.12)",
         "section_shadow": "0 4px 16px rgba(0,0,0,0.2)",
         "ticker_color": "#f8fafc",
