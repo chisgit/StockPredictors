@@ -324,11 +324,15 @@ def create_grid_display(open_val, high_val, low_val, prev_close_val, close_val, 
         )
 
     return (
-        '<div style="display: grid; '
-        'grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; '
-        'margin: 8px 0 2px 0;">'
+        '<style>'
+        '.stats-grid-6{display:grid;gap:12px;margin:8px 0 2px 0;grid-template-columns:repeat(2,1fr)}'
+        '@container stats-grid (min-width:520px){.stats-grid-6{grid-template-columns:repeat(3,1fr)}}'
+        '@container stats-grid (min-width:960px){.stats-grid-6{grid-template-columns:repeat(6,1fr)}}'
+        '</style>'
+        '<div style="container-type:inline-size;container-name:stats-grid">'
+        '<div class="stats-grid-6">'
         + ''.join(grid_items)
-        + '</div>'
+        + '</div></div>'
     )
 
 

@@ -91,6 +91,21 @@ def test_dark_close_down_color(monkeypatch):
     assert THEME["dark"]["close_down"] in html
 
 
+# ── DM5: responsive even-distribution grid ────────────────────────────────────
+
+def test_grid_responsive_breakpoints(monkeypatch):
+    monkeypatch.setattr("render_helpers.market_status", lambda: "AFTER_MARKET_CLOSE")
+    html = create_grid_display(100.0, 105.0, 98.0, 99.0, 103.0, 1_000_000, theme_name="dark")
+    assert "@container stats-grid (min-width:520px)" in html
+    assert "@container stats-grid (min-width:960px)" in html
+    assert "container-name:stats-grid" in html
+    assert "container-type:inline-size" in html
+    assert "repeat(2,1fr)" in html
+    assert "repeat(3,1fr)" in html
+    assert "repeat(6,1fr)" in html
+    assert "auto-fit" not in html
+
+
 # ── _close_color theme-aware ──────────────────────────────────────────────────
 
 def test_close_color_up_dark():
