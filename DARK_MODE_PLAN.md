@@ -1,7 +1,9 @@
 # Dark Mode — Polish Pass Plan
 
-Status: DM3 done ✅ · DM6 done ✅ · palette pass done ✅ · DM4/DM5/DM2/DM1 pending · Owner: clpatel · Started: 2026-06-14
-Branch: `feat/dark-theme-toggle` (all six items land here — see Branching below)
+Status: **DM3 done ✅ · DM6 done ✅ · DM5 done ✅ · palette pass done ✅** · DM4/DM2/DM1 pending · Owner: clpatel · Started: 2026-06-14
+Branch: `feat/dark-mode-polish` (DM4/DM2/DM1 land here — Branching updated post-merge)
+
+**Session (2026-06-15):** DM3 + DM6 + palette + DM5 merged to main (ca50213). Started feat/dark-mode-polish for final three items.
 
 This plan is the §7 follow-through from [UI_UX_PLAN.md](UI_UX_PLAN.md). §7 introduced
 the theme token dict and the toggle; this pass fixes the six visual defects that
