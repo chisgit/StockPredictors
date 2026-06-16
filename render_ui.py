@@ -174,14 +174,15 @@ def update_selected_tickers(change):
 
 
 def render_ui():
-    with st.sidebar:
+    col_icon, col_title = st.columns([1, 12])
+    with col_icon:
         current_theme = st.session_state.get("theme", "dark")
         icon = "☀️" if current_theme == "dark" else "🌙"
         if st.button(icon, use_container_width=False):
             st.session_state.theme = "light" if current_theme == "dark" else "dark"
             st.rerun()
-
-    st.title("Stock Price Predictor")
+    with col_title:
+        st.title("Stock Price Predictor")
 
     # Initialize default tickers if not already in session state
     if "tickers" not in st.session_state:
