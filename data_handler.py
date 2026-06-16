@@ -1,4 +1,5 @@
 import yfinance as yf
+import yfinance.shared as yf_shared
 import pandas as pd
 import os
 import threading
@@ -12,6 +13,12 @@ except Exception:
 
 _YF_CACHE_LOCK = threading.Lock()
 _YF_TEST_CACHE_REFRESH_MESSAGE = "placeholder"
+_YF_RETRY_ERROR_MARKERS = (
+    "try after a while",
+    "failed download",
+    "yfr",
+    "runtimeerror",
+)
 
 
 def _default_yfinance_cache_dir():
@@ -65,7 +72,12 @@ def _download_with_retry(ticker, start_date, end_date):
     """
     configure_yfinance_cache()
     try:
-        return yf.download(ticker, start=start_date, end=end_date)
+        df = yf.download(ticker, start=start_date, end=end_date)
+        if _should_refresh_after_download(ticker, df):
+            print(f"yfinance returned a retryable failure for {ticker}; clearing cache and retrying once")
+            clear_yfinance_cache()
+            df = yf.download(ticker, start=start_date, end=end_date)
+        return df
     except Exception as exc:
         message = str(exc).lower()
         if os.environ.get("YFINANCE_TEST_CACHE_REFRESH", "").lower() in ("1", "true", "yes"):
@@ -88,6 +100,25 @@ def _download_with_retry(ticker, start_date, end_date):
             clear_yfinance_cache()
             return yf.download(ticker, start=start_date, end=end_date)
         raise
+
+
+def _should_refresh_after_download(ticker, df):
+    """
+    Detect the 'Failed download' / 'Try after a while.' path that yfinance logs
+    via shared._ERRORS while still returning a frame.
+    """
+    if df is None:
+        return True
+
+    if not getattr(df, "empty", True):
+        return False
+
+    ticker_key = str(ticker).upper()
+    error_text = ""
+    if hasattr(yf_shared, "_ERRORS"):
+        error_text = str(yf_shared._ERRORS.get(ticker_key, "")).lower()
+
+    return any(marker in error_text for marker in _YF_RETRY_ERROR_MARKERS)
 
 
 def invalidate_yfinance_cache():
