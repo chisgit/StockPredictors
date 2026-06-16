@@ -214,6 +214,14 @@ def render_ui():
     else:
         st.session_state.selected_tickers = selected_tickers
 
+    widget_key = "stock_multiselect"
+    if widget_key in st.session_state:
+        current_widget_value = st.session_state[widget_key]
+        if not isinstance(current_widget_value, list) or any(
+            item not in valid_tickers for item in current_widget_value
+        ):
+            del st.session_state[widget_key]
+
     # Add warning if max tickers limit is reached
     if len(st.session_state.selected_tickers) >= UI_RULES["max_tickers"]:
         st.warning(f"Maximum {UI_RULES['max_tickers']} tickers can be selected")
@@ -222,9 +230,9 @@ def render_ui():
         "Select stocks to predict:",
         valid_tickers,
         default=selected_tickers,
-        key="stock_multiselect",
+        key=widget_key,
         on_change=update_selected_tickers,
-        args=["stock_multiselect"],
+        args=[widget_key],
         max_selections=UI_RULES["max_tickers"],
     )
 
