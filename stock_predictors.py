@@ -28,16 +28,18 @@ def main():
         tickers = st.session_state.selected_tickers
 
         # Execute pipeline
-        predictions = execute_pipeline(tickers)
+        predictions, skipped_tickers = execute_pipeline(tickers)
 
-        # Cache predictions
+        # Cache predictions and skipped tickers
         st.session_state.last_predictions = predictions
+        st.session_state.last_skipped_tickers = skipped_tickers
 
         # Display results
-        display_results(predictions)
+        display_results(predictions, skipped_tickers)
     elif st.session_state.get('last_predictions') is not None:
         # Re-render cached predictions
-        display_results(st.session_state.last_predictions)
+        skipped_tickers = st.session_state.get('last_skipped_tickers', [])
+        display_results(st.session_state.last_predictions, skipped_tickers)
 
 # Run the main function
 if __name__ == "__main__":

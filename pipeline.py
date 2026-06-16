@@ -11,6 +11,34 @@ from feature_engineering import add_technical_indicators, get_feature_columns
 from model import train_model
 import traceback
 
+
+def _feature_value(frame, feature, ticker, fill_value=0.0):
+    """
+    Read a single feature value from a one-row frame and normalize missing / array-like values.
+    """
+    try:
+        value = frame[(feature, ticker)].iloc[0]
+    except Exception:
+        return fill_value
+
+    if isinstance(value, (np.ndarray, list, tuple)):
+        value = np.asarray(value).squeeze()
+        if np.asarray(value).ndim != 0:
+            return fill_value
+        value = value.item()
+
+    if pd.isna(value):
+        return fill_value
+
+    return float(value)
+
+
+def _prediction_scalar(prediction):
+    """
+    Convert model outputs like shape (1, 1) or (1,) into a plain Python float.
+    """
+    return float(np.asarray(prediction).squeeze().item())
+
 def execute_pipeline(tickers):
     """Process each ticker independently with models trained specifically for that ticker"""
     # Initialize storage for predictions and trained models
@@ -20,6 +48,7 @@ def execute_pipeline(tickers):
     
     # Store models for each ticker
     models = {}
+    skipped_tickers = []  # Track tickers that couldn't be processed
     
     for ticker in tickers:
         st.markdown(f"Processing {ticker}...")
@@ -33,6 +62,7 @@ def execute_pipeline(tickers):
             
             if stock_data.empty:
                 print(f"\n\nNo data returned for {ticker}\n\n")
+                skipped_tickers.append((ticker, "No data returned"))
                 continue
             
             # Process base data (only cleans Prev Close NaNs)
@@ -52,14 +82,23 @@ def execute_pipeline(tickers):
             print("\nVerifying Next_Day_Close data:")
             print(f"Sample of Next_Day_Close values:\n{train_ready_data_xgb[('Next_Day_Close', current_ticker)].tail()}")
             print(f"Sample of Close values:\n{train_ready_data_xgb[('Close', current_ticker)].tail()}")
-
+    
             # Save last rows AFTER adding Next_Day_Close (will have NaN in Next_Day_Close)
             last_row_basic = processed_data.iloc[-1:].copy()
             last_row_with_tech = train_ready_data_xgb.iloc[-1:].copy()
             
+            # Create training_error_msg = None
             # Create training datasets by dropping NaNs only once
             train_ready_data_linear = processed_data.dropna().copy()
             train_ready_data_xgb = train_ready_data_xgb.dropna().copy()
+            
+            # Check if we have enough data to train (need at least 2 samples for train/test split)
+            min_samples = 2
+            if len(train_ready_data_linear) < min_samples or len(train_ready_data_xgb) < min_samples:
+                _error_msg = f"Insufficient data: linear={len(train_ready_data_linear)}, xgb={len(train_ready_data_xgb)} samples"
+                print(f"\nInsufficient data for {ticker}: {_error_msg}. Skipping.")
+                skipped_tickers.append((ticker, _error_msg))
+                continue
             
             # Train separate models for this specific ticker
             models[ticker] = {
@@ -125,21 +164,27 @@ def execute_pipeline(tickers):
                 
                 # --- Todays Close Linear Regression Prediction using last_row_basic ---
                 feature_cols_linear_today = get_feature_columns(model_type="linear_regression", target="today")
-                prediction_input_linear_today = [last_row_basic[(col, ticker)].iloc[0] for col in feature_cols_linear_today]
+                prediction_input_linear_today = [
+                    _feature_value(last_row_basic, col, ticker, fill_value=0.0)
+                    for col in feature_cols_linear_today
+                ]
                 linear_prediction_data_today = np.array(prediction_input_linear_today).reshape(1, -1)
                 linear_prediction_scaled_today = X_scaler_linear_today.transform(linear_prediction_data_today)
                 linear_prediction_today = linear_model_today.predict(linear_prediction_scaled_today)
                 linear_prediction_today = y_scaler_linear_today.inverse_transform(linear_prediction_today.reshape(-1, 1))
-                todays_close_predictions.append((ticker, float(linear_prediction_today[0])))
+                todays_close_predictions.append((ticker, _prediction_scalar(linear_prediction_today)))
 
                 # Linear Regression prediction for next day
                 feature_cols_linear_next = get_feature_columns(model_type="linear_regression", target="next_day")
-                prediction_input_linear_next = [last_row_basic[(col, ticker)].iloc[0] for col in feature_cols_linear_next]
+                prediction_input_linear_next = [
+                    _feature_value(last_row_basic, col, ticker, fill_value=0.0)
+                    for col in feature_cols_linear_next
+                ]
                 linear_prediction_data_next = np.array(prediction_input_linear_next).reshape(1, -1)
                 linear_prediction_scaled_next = X_scaler_linear_next_day.transform(linear_prediction_data_next)
                 linear_prediction_next = linear_model_next_day.predict(linear_prediction_scaled_next)
                 linear_prediction_next = y_scaler_linear_next_day.inverse_transform(linear_prediction_next.reshape(-1, 1))
-                next_days_close_predictions.append((ticker, float(linear_prediction_next[0])))
+                next_days_close_predictions.append((ticker, _prediction_scalar(linear_prediction_next)))
 
                 # XGBoost prediction for today's close
                 feature_cols_xgb_today = get_feature_columns(model_type="xgboost", target="today")
@@ -159,7 +204,7 @@ def execute_pipeline(tickers):
                     X_scaler_xgb_today,
                     y_scaler_xgb_today
                 )
-                todays_close_predictions.append((ticker, float(xgb_prediction_today[0])))
+                todays_close_predictions.append((ticker, _prediction_scalar(xgb_prediction_today)))
 
                 # Next day's close prediction
                 feature_cols_xgb_next = get_feature_columns(model_type="xgboost", target="next_day")
@@ -178,12 +223,12 @@ def execute_pipeline(tickers):
                     X_scaler_xgb_next_day,
                     y_scaler_xgb_next_day
                 )
-                next_days_close_predictions.append((ticker, float(xgb_prediction_next_day[0])))
+                next_days_close_predictions.append((ticker, _prediction_scalar(xgb_prediction_next_day)))
                 
                 # Fix debugging output formatting
-                print(f"DEBUG XGBoost today's close for {ticker}: {float(xgb_prediction_today[0]):.2f}")
-                print(f"DEBUG Linear Regression next day close for {ticker}: {float(linear_prediction_next[0]):.2f}")
-                print(f"DEBUG XGBoost next day close for {ticker}: {float(xgb_prediction_next_day[0]):.2f}")
+                print(f"DEBUG XGBoost today's close for {ticker}: {_prediction_scalar(xgb_prediction_today):.2f}")
+                print(f"DEBUG Linear Regression next day close for {ticker}: {_prediction_scalar(linear_prediction_next):.2f}")
+                print(f"DEBUG XGBoost next day close for {ticker}: {_prediction_scalar(xgb_prediction_next_day):.2f}")
                 
             except Exception as e:
                 print(f"Error making predictions for {ticker}: {str(e)}")
@@ -204,7 +249,9 @@ def execute_pipeline(tickers):
     # Log the final state of predictions
     print(f"DEBUG: Predictions - Close Predictions: {todays_close_predictions}")
     print(f"DEBUG: Predictions - Next Day Close Predictions: {next_days_close_predictions}")
-    return predictions
+    if skipped_tickers:
+        print(f"DEBUG: Skipped tickers: {skipped_tickers}")
+    return predictions, skipped_tickers
 
 def make_prediction(features, model, X_scaler, y_scaler):
     """Helper function to make predictions using a model"""
