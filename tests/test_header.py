@@ -23,12 +23,12 @@ DATE = "Friday, June 12"
 
 
 def test_before_open_shows_last_traded_date():
-    html = generate_market_status_header("BEFORE_MARKET_OPEN", DATE)
+    html = generate_market_status_header("BEFORE_MARKET_OPEN", DATE, theme_name="dark")
     assert "🔴" in html
-    # status title on its own line; date in a separate dark-grey subtitle (no dash)
+    # status title on its own line; date in a separate muted subtitle (uses theme token)
     assert "Market Closed" in html
     assert f"Displaying Predictions for {DATE}" in html
-    assert "color: #555555" in html
+    assert "color: #64748b" in html  # dark theme text_delta_label
     assert " - Displaying" not in html
 
 

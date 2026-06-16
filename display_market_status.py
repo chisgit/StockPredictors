@@ -1,8 +1,9 @@
 import streamlit as st
 from utils import market_status, is_trading_day, get_nyse_date
+from render_helpers import _resolve_theme
 
 
-def generate_market_status_header(status, last_date_str, today_is_trading_day=True):
+def generate_market_status_header(status, last_date_str, today_is_trading_day=True, theme_name=None):
     """Single status-driven header (icon + title, left-aligned).
 
     The title carries everything inline (no separate subtitle). `last_date_str`
@@ -39,9 +40,10 @@ def generate_market_status_header(status, last_date_str, today_is_trading_day=Tr
     else:
         raise ValueError(f"Unknown market status: {status}")
 
-    # subtitle ~65% of title size (1.05rem vs 1.6rem), dark grey, snug under title
+    # subtitle ~65% of title size (1.05rem vs 1.6rem), uses theme's muted delta-label color
+    t = _resolve_theme(theme_name)
     subtitle_html = (
-        f"<div style='font-size: 1.05rem; line-height: 1.1; color: #555555; margin-top: -10px;'>{subtitle}</div>"
+        f"<div style='font-size: 1.05rem; line-height: 1.1; color: {t['text_delta_label']}; margin-top: -10px;'>{subtitle}</div>"
         if subtitle else ""
     )
     return (
@@ -74,9 +76,10 @@ def display_market_status(last_available_date):
     status = market_status()
     today_is_trading_day = is_trading_day(get_nyse_date())
     last_date_str = last_available_date.strftime('%A, %B %d')
+    theme_name = st.session_state.get("theme", "dark")
 
     st.markdown(
-        generate_market_status_header(status, last_date_str, today_is_trading_day),
+        generate_market_status_header(status, last_date_str, today_is_trading_day, theme_name),
         unsafe_allow_html=True,
     )
     st.markdown("---")  # Add a separator line
