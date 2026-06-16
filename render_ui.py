@@ -204,14 +204,24 @@ def render_ui():
     if "selected_tickers" not in st.session_state:
         st.session_state.selected_tickers = UI_RULES["default_tickers"].copy()
 
+    valid_tickers = list(st.session_state.tickers)
+    selected_tickers = [
+        ticker for ticker in st.session_state.selected_tickers if ticker in valid_tickers
+    ]
+    if not selected_tickers:
+        selected_tickers = UI_RULES["default_tickers"].copy()
+        st.session_state.selected_tickers = selected_tickers
+    else:
+        st.session_state.selected_tickers = selected_tickers
+
     # Add warning if max tickers limit is reached
     if len(st.session_state.selected_tickers) >= UI_RULES["max_tickers"]:
         st.warning(f"Maximum {UI_RULES['max_tickers']} tickers can be selected")
 
     tickers = st.multiselect(
         "Select stocks to predict:",
-        st.session_state.tickers,
-        default=st.session_state.selected_tickers,
+        valid_tickers,
+        default=selected_tickers,
         key="stock_multiselect",
         on_change=update_selected_tickers,
         args=["stock_multiselect"],
