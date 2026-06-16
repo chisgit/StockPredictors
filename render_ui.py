@@ -59,7 +59,7 @@ def display_results(predictions, skipped_tickers=None):
     for ticker, reason in skipped_tickers:
         with render_section_container(f"ticker_section_{ticker}_skipped", "dark"):
             st.markdown(ticker_header_html(ticker, "dark"), unsafe_allow_html=True)
-            st.warning(f"⚠️ Unable to generate predictions for {ticker}: {reason}")
+            st.warning(f"⚠️ Insufficient historical data for {ticker} — need more trading days to generate predictions")
 
     for ticker, predictions in grouped_predictions.items():
         try:
