@@ -14,6 +14,7 @@ from render_helpers import (
 from rules import UI_RULES
 from display_market_status import display_market_status, generate_next_day_header
 from utils import market_status, next_trading_day
+from data_handler import debug_yfinance_cache_location, invalidate_yfinance_cache
 
 
 def enforce_max_tickers():
@@ -183,6 +184,18 @@ def render_ui():
             st.rerun()
     with col_title:
         st.title("Stock Price Predictor")
+
+    with st.expander("Cache Debug", expanded=False):
+        st.caption("Inspect or clear the yfinance cache without restarting the service.")
+        if st.button("Show yfinance cache path", key="show_yf_cache_path"):
+            cache_dir = debug_yfinance_cache_location()
+            st.success(f"Cache path: {cache_dir}")
+            st.code(str(cache_dir))
+
+        if st.button("Clear yfinance cache now", key="clear_yf_cache_now"):
+            invalidate_yfinance_cache()
+            st.success("yfinance cache cleared. The next request will rebuild it.")
+            st.rerun()
 
     # Initialize default tickers if not already in session state
     if "tickers" not in st.session_state:
