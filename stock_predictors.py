@@ -3,10 +3,12 @@ import time as time_module
 from render_ui import render_ui, display_results
 from pipeline import execute_pipeline
 from session_state import initialize_session_state
+from data_handler import debug_yfinance_cache_location
 
 def main():
     # Initialize session state
     initialize_session_state()
+    debug_yfinance_cache_location()
 
     # Render UI immediately after initialization
     render_ui()

@@ -1,17 +1,61 @@
 import yfinance as yf
 import pandas as pd
 import os
+import threading
 from pathlib import Path
 import shutil
+
+try:
+    from yfinance import cache as yf_cache
+except Exception:
+    yf_cache = None
+
+_YF_CACHE_LOCK = threading.Lock()
+_YF_TEST_CACHE_REFRESH_MESSAGE = "placeholder"
+
+
+def _default_yfinance_cache_dir():
+    """
+    Pick the yfinance cache location used by the remote service.
+    """
+    return Path.home() / ".cache" / "py-yfinance"
+
+
+def configure_yfinance_cache(cache_dir=None):
+    """
+    Point yfinance at a writable cache location before any downloads happen.
+    """
+    cache_dir = Path(cache_dir) if cache_dir else _default_yfinance_cache_dir()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    if yf_cache is not None and hasattr(yf_cache, "set_cache_location"):
+        yf_cache.set_cache_location(str(cache_dir))
+    return cache_dir
+
+
+def debug_yfinance_cache_location():
+    """
+    Print the resolved cache path and current filesystem state for Render logs.
+    """
+    cache_dir = configure_yfinance_cache()
+    print(f"yfinance cache path: {cache_dir}")
+    print(f"yfinance cache exists: {cache_dir.exists()}")
+    if cache_dir.exists():
+        try:
+            print(f"yfinance cache entries: {[p.name for p in cache_dir.iterdir()]}")
+        except Exception as exc:
+            print(f"yfinance cache listing failed: {exc}")
+    return cache_dir
 
 
 def clear_yfinance_cache():
     """
     Remove local yfinance cache files so the library can rebuild them cleanly.
     """
-    cache_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "py-yfinance"
-    if cache_dir.exists():
-        shutil.rmtree(cache_dir, ignore_errors=True)
+    cache_dir = configure_yfinance_cache()
+    with _YF_CACHE_LOCK:
+        if cache_dir.exists():
+            shutil.rmtree(cache_dir, ignore_errors=True)
+        cache_dir.mkdir(parents=True, exist_ok=True)
         print(f"Cleared yfinance cache: {cache_dir}")
 
 
@@ -19,15 +63,39 @@ def _download_with_retry(ticker, start_date, end_date):
     """
     Download once, and retry after clearing cache if yfinance hits a cache schema error.
     """
+    configure_yfinance_cache()
     try:
         return yf.download(ticker, start=start_date, end=end_date)
     except Exception as exc:
         message = str(exc).lower()
-        if "no such table" in message or "_kv" in message or "operationalerror" in type(exc).__name__.lower():
+        if os.environ.get("YFINANCE_TEST_CACHE_REFRESH", "").lower() in ("1", "true", "yes"):
+            if _YF_TEST_CACHE_REFRESH_MESSAGE in message:
+                print(f"yfinance test cache refresh trigger for {ticker}: {exc}")
+                clear_yfinance_cache()
+                return yf.download(ticker, start=start_date, end=end_date)
+
+        cache_error_signals = (
+            "no such table",
+            "_kv",
+            "operationalerror",
+            "sqlite",
+            "database is locked",
+            "disk i/o error",
+            "malformed",
+        )
+        if any(signal in message for signal in cache_error_signals) or "operationalerror" in type(exc).__name__.lower():
             print(f"yfinance cache error for {ticker}: {exc}")
             clear_yfinance_cache()
             return yf.download(ticker, start=start_date, end=end_date)
         raise
+
+
+def invalidate_yfinance_cache():
+    """
+    Explicit cache reset hook you can call from a request handler or admin action.
+    """
+    clear_yfinance_cache()
+    return True
 
 def custom_read_csv(file_path):
     """
