@@ -208,11 +208,11 @@ def generate_chart_widget_html(ticker, chart_json, theme_name=None):
     """Build TradingView chart HTML. Pure function for testability."""
     t = _resolve_theme(theme_name)
     return f"""
-    <div>
-      <div style="padding: 14px 16px; border: 1px solid {t["card_border"]}; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: {t["card_bg"]}; border-radius: 14px 14px 0 0; box-shadow: {t["card_shadow"]};">
+    <div style="padding: 16px; background: {t["card_bg"]}; border: 1px solid {t["card_border"]}; border-radius: 14px; box-shadow: {t["card_shadow"]};">
+      <div style="padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
         <div style="font-weight: 800; font-size: 1.1em; color: {t["text_price"]};">{ticker.upper()} · Last 10 Trading Days</div>
       </div>
-      <div id="tv_chart_{ticker}" style="height: 420px; width: 100%; padding: 0 16px 16px 16px; background: {t["chart_bg"]}; border: 1px solid {t["card_border"]}; border-top: none; border-radius: 0 0 14px 14px; box-shadow: {t["card_shadow"]}; box-sizing: border-box;"></div>
+      <div id="tv_chart_{ticker}" style="height: 420px; width: 100%; background: {t["chart_bg"]}; border-radius: 8px;"></div>
     </div>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script>

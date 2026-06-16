@@ -100,10 +100,10 @@ def display_results(predictions):
                 actual_close = formatted_data["Close"]
 
                 # Display two model cards with predictions
-                display_predictions(grouped_predictions[ticker], actual_close, _delta_caption(status == "MARKET_OPEN"), theme)
+                display_predictions(grouped_predictions[ticker], actual_close, _delta_caption(status == "MARKET_OPEN"), "dark")
 
                 # Chart sits directly below the prediction strip and accuracy note
-                display_tradingview_chart_from_data(ticker, latest_data, theme)
+                display_tradingview_chart_from_data(ticker, latest_data, "dark")
 
                 # Create grid display with appropriate close value based on market status
                 grid_html = create_grid_display(
@@ -114,7 +114,7 @@ def display_results(predictions):
                     formatted_data["Close"],
                     formatted_data["Volume"],
                     session_date=last_available_date,
-                    theme_name=theme,
+                    theme_name="dark",
                 )
                 st.markdown(grid_html, unsafe_allow_html=True)
 
@@ -145,14 +145,12 @@ def display_results(predictions):
                             latest_data["Close"].iloc[-1].item()
                         )  # Added .item()
 
-                        theme = st.session_state.get("theme", "dark")
-
-                        with render_section_container(f"next_day_section_{ticker}", theme):
+                        with render_section_container(f"next_day_section_{ticker}", "dark"):
                             # Section header with ticker and bar
-                            st.markdown(ticker_header_html(ticker, theme), unsafe_allow_html=True)
+                            st.markdown(ticker_header_html(ticker, "dark"), unsafe_allow_html=True)
 
                             # Display two model cards for next-day predictions
-                            display_predictions(predictions, current_close, _delta_caption(status == "MARKET_OPEN"), theme)
+                            display_predictions(predictions, current_close, _delta_caption(status == "MARKET_OPEN"), "dark")
 
                 except Exception as e:
 
@@ -175,15 +173,7 @@ def update_selected_tickers(change):
 
 
 def render_ui():
-    col_icon, col_title = st.columns([1, 12])
-    with col_icon:
-        current_theme = st.session_state.get("theme", "dark")
-        icon = "☀️" if current_theme == "dark" else "🌙"
-        if st.button(icon, use_container_width=False):
-            st.session_state.theme = "light" if current_theme == "dark" else "dark"
-            st.rerun()
-    with col_title:
-        st.title("Stock Price Predictor")
+    st.title("Stock Price Predictor")
 
     with st.expander("Cache Debug", expanded=False):
         st.caption("Inspect or clear the yfinance cache without restarting the service.")

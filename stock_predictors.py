@@ -30,17 +30,14 @@ def main():
         # Execute pipeline
         predictions = execute_pipeline(tickers)
 
-        # Cache predictions so theme toggle can re-render without re-fetching
+        # Cache predictions
         st.session_state.last_predictions = predictions
-        st.session_state.last_rendered_theme = st.session_state.get('theme', 'dark')
 
         # Display results
         display_results(predictions)
-    elif (st.session_state.get('last_predictions') is not None and
-          st.session_state.get('last_rendered_theme') != st.session_state.get('theme', 'dark')):
-        # Re-render on theme change only — data served from st.cache_data (no re-fetch)
+    elif st.session_state.get('last_predictions') is not None:
+        # Re-render cached predictions
         display_results(st.session_state.last_predictions)
-        st.session_state.last_rendered_theme = st.session_state.get('theme', 'dark')
 
 # Run the main function
 if __name__ == "__main__":

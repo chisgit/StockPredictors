@@ -23,7 +23,7 @@ DATE = "Friday, June 12"
 
 
 def test_before_open_shows_last_traded_date():
-    html = generate_market_status_header("BEFORE_MARKET_OPEN", DATE, theme_name="dark")
+    html = generate_market_status_header("BEFORE_MARKET_OPEN", DATE)
     assert "🔴" in html
     # status title on its own line; date in a separate muted subtitle (uses theme token)
     assert "Market Closed" in html
