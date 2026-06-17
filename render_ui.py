@@ -58,7 +58,7 @@ def display_results(predictions, skipped_tickers=None):
 
     # Display skipped tickers with messages
     for ticker, reason in skipped_tickers:
-        with render_section_container(f"ticker_section_{ticker}_skipped", "dark"):
+        with render_section_container(f"ticker_section_{ticker}_skipped", "dark", padding_bottom=28, margin_bottom=20):
             st.markdown(ticker_header_html(ticker, "dark"), unsafe_allow_html=True)
             st.warning(f"⚠️ Insufficient historical data for {ticker} — need more trading days to generate predictions")
 
@@ -100,7 +100,7 @@ def display_results(predictions, skipped_tickers=None):
 
             theme = st.session_state.get("theme", "dark")
 
-            with render_section_container(f"ticker_section_{ticker}", theme):
+            with render_section_container(f"ticker_section_{ticker}", theme, padding_bottom=28, margin_bottom=20):
                 # Section header with ticker and bar
                 st.markdown(ticker_header_html(ticker, theme), unsafe_allow_html=True)
 
