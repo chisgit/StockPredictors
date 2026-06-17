@@ -191,6 +191,7 @@ def update_selected_tickers(change):
                 widget_value=updated_sel_tickers,
                 selected=st.session_state.selected_tickers,
             )
+            st.session_state.pending_autoselect_ticker = None
             return
 
     # Update selected_tickers to match the multiselect state
@@ -277,9 +278,6 @@ def render_ui():
 
     # Update selected tickers based on multiselect
     st.session_state.selected_tickers = tickers
-    pending_autoselect = st.session_state.get("pending_autoselect_ticker")
-    if pending_autoselect and pending_autoselect in [ticker.upper() for ticker in tickers]:
-        st.session_state.pending_autoselect_ticker = None
     trace_event("render_ui.after_multiselect", selected=tickers)
 
     # Search bar — keyed by counter so incrementing counter creates a fresh widget (clears input).
