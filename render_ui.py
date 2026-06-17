@@ -155,7 +155,7 @@ def display_results(predictions, skipped_tickers=None):
                             latest_data["Close"].iloc[-1].item()
                         )  # Added .item()
 
-                        with render_section_container(f"next_day_section_{ticker}", "dark"):
+                        with render_section_container(f"next_day_section_{ticker}", "dark", padding_bottom=28, margin_bottom=20):
                             # Section header with ticker and bar
                             st.markdown(ticker_header_html(ticker, "dark"), unsafe_allow_html=True)
 

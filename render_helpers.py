@@ -358,23 +358,25 @@ def _safe_key(key):
     return "".join(c if c.isalnum() else "_" for c in str(key))
 
 
-def section_container_css(key, theme_name=None):
+def section_container_css(key, theme_name=None, padding_bottom=16, margin_bottom=0):
     """Scoped <style> styling the native st.container(key=...) as a ticker
     grouping card (DM3). Pure string so it's unit-testable; the actual mount
     happens in render_section_container."""
     t = _resolve_theme(theme_name)
     safe = _safe_key(key)
+    margin_rule = f"margin-bottom: {margin_bottom}px; " if margin_bottom else ""
     return (
         f"<style>.st-key-{safe} {{ "
         f"background: {t['section_bg']}; "
         f"border: 1px solid {t['section_border']}; "
         f"border-radius: 20px; "
-        f"padding: 18px 18px 16px; "
+        f"padding: 18px 18px {padding_bottom}px; "
+        f"{margin_rule}"
         f"box-shadow: {t['section_shadow']}; }}</style>"
     )
 
 
-def render_section_container(key, theme_name=None):
+def render_section_container(key, theme_name=None, padding_bottom=16, margin_bottom=0):
     """Native bordered grouping card for a ticker section (DM3).
 
     Returns a native st.container — use it as a `with` block so the header,
@@ -382,7 +384,7 @@ def render_section_container(key, theme_name=None):
     grouped surface. Reusable: DM6 applies it to the next-day section too.
     """
     safe = _safe_key(key)
-    st.markdown(section_container_css(safe, theme_name), unsafe_allow_html=True)
+    st.markdown(section_container_css(safe, theme_name, padding_bottom, margin_bottom), unsafe_allow_html=True)
     return st.container(key=safe)
 
 
