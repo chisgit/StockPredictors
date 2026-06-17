@@ -19,7 +19,11 @@ _YF_RETRY_ERROR_MARKERS = (
     "failed download",
     "yfr",
     "runtimeerror",
+    "rate limit",
+    "rate-limit",
+    "too many requests",
 )
+YFINANCE_PROVIDER_DOWN_MESSAGE = "yfinance data provider is down, please try later"
 
 
 def _default_yfinance_cache_dir():
@@ -152,6 +156,28 @@ def _should_refresh_after_download(ticker, df):
             error=error_text,
         )
     return should_refresh
+
+
+def yfinance_provider_error_text(ticker=None, exc=None):
+    """
+    Return yfinance provider/rate-limit error text when the latest failure looks
+    external to the app. Used for user-facing messages without blocking search.
+    """
+    parts = []
+    if exc is not None:
+        parts.append(f"{type(exc).__name__}: {exc}")
+
+    if ticker is not None and hasattr(yf_shared, "_ERRORS"):
+        parts.append(str(yf_shared._ERRORS.get(str(ticker).upper(), "")))
+
+    error_text = " ".join(part for part in parts if part).lower()
+    if any(marker in error_text for marker in _YF_RETRY_ERROR_MARKERS):
+        return error_text
+    return ""
+
+
+def is_yfinance_provider_down(ticker=None, exc=None):
+    return bool(yfinance_provider_error_text(ticker, exc))
 
 
 def invalidate_yfinance_cache():

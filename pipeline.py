@@ -5,7 +5,11 @@ import time as time_module
 from datetime import timedelta
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from utils import get_nyse_date, market_status, get_nyse_datetime, get_last_row
-from data_handler import fetch_data
+from data_handler import (
+    YFINANCE_PROVIDER_DOWN_MESSAGE,
+    fetch_data,
+    is_yfinance_provider_down,
+)
 from data_processor import preprocess_data
 from feature_engineering import add_technical_indicators, get_feature_columns
 from model import train_model
@@ -262,6 +266,10 @@ def execute_pipeline(tickers):
                 continue
 
         except Exception as e:
+            if is_yfinance_provider_down(ticker, e):
+                skipped_tickers.append((ticker, YFINANCE_PROVIDER_DOWN_MESSAGE))
+            else:
+                skipped_tickers.append((ticker, str(e)))
             trace_event(
                 "pipeline.ticker_exception",
                 ticker=ticker,
