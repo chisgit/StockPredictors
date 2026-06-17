@@ -14,7 +14,11 @@ from render_helpers import (
 from rules import UI_RULES
 from display_market_status import display_market_status, generate_next_day_header
 from utils import market_status, next_trading_day
-from data_handler import debug_yfinance_cache_location, invalidate_yfinance_cache
+from data_handler import (
+    YFINANCE_PROVIDER_DOWN_MESSAGE,
+    debug_yfinance_cache_location,
+    invalidate_yfinance_cache,
+)
 from trace_utils import trace_event
 
 
@@ -60,7 +64,10 @@ def display_results(predictions, skipped_tickers=None):
     for ticker, reason in skipped_tickers:
         with render_section_container(f"ticker_section_{ticker}_skipped", "dark", padding_bottom=28, margin_bottom=20):
             st.markdown(ticker_header_html(ticker, "dark"), unsafe_allow_html=True)
-            st.warning(f"⚠️ Insufficient historical data for {ticker} — need more trading days to generate predictions")
+            if reason == YFINANCE_PROVIDER_DOWN_MESSAGE:
+                st.error(reason)
+            else:
+                st.warning(f"Insufficient historical data for {ticker} - need more trading days to generate predictions")
 
     for ticker, predictions in grouped_predictions.items():
         try:
@@ -303,7 +310,8 @@ def render_ui():
 
     if new_ticker:
         trace_event("render_ui.before_search_and_add", new_ticker=new_ticker)
-        search_result = search_and_add_ticker(new_ticker)
+        with st.spinner("Checking ticker..."):
+            search_result = search_and_add_ticker(new_ticker)
         trace_event("render_ui.after_search_and_add", new_ticker=new_ticker, result=str(search_result))
         if search_result is True:
             # Increment counters → next render gets fresh widgets. This keeps
