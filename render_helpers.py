@@ -1,4 +1,5 @@
 import yfinance as yf
+import yfinance.shared as yf_shared
 import streamlit as st
 import streamlit.components.v1 as components
 from utils import market_status
@@ -57,6 +58,16 @@ THEME = {
         "delta_neutral": "#475569",
     },
 }
+
+YFINANCE_PROVIDER_DOWN_MESSAGE = "yfinance data provider is down, please try later"
+_YFINANCE_PROVIDER_ERROR_MARKERS = (
+    "try after a while",
+    "failed download",
+    "yfr",
+    "rate limit",
+    "rate-limit",
+    "too many requests",
+)
 
 
 def _resolve_theme(theme_name):
@@ -388,6 +399,41 @@ def render_section_container(key, theme_name=None, padding_bottom=16, margin_bot
     return st.container(key=safe)
 
 
+def _yfinance_shared_error(ticker):
+    ticker_key = str(ticker).upper()
+    if hasattr(yf_shared, "_ERRORS"):
+        return str(yf_shared._ERRORS.get(ticker_key, ""))
+    return ""
+
+
+def _is_yfinance_provider_failure(message):
+    text = str(message).lower()
+    return any(marker in text for marker in _YFINANCE_PROVIDER_ERROR_MARKERS)
+
+
+def validate_ticker_with_yfinance(ticker):
+    """Return (is_valid, provider_down) for a searched ticker symbol."""
+    ticker = str(ticker).strip().upper()
+    if not ticker:
+        return False, False
+
+    try:
+        data = yf.download(ticker, period="5d", interval="1d", progress=False)
+    except Exception as exc:
+        error_text = f"{type(exc).__name__}: {exc}"
+        trace_event("search.validation_exception", ticker=ticker, error=error_text)
+        return False, _is_yfinance_provider_failure(error_text)
+
+    shared_error = _yfinance_shared_error(ticker)
+    if shared_error:
+        trace_event("search.validation_shared_error", ticker=ticker, error=shared_error)
+
+    if data is not None and not getattr(data, "empty", True):
+        return True, False
+
+    return False, _is_yfinance_provider_failure(shared_error)
+
+
 def ticker_header_html(ticker, theme_name=None):
     """Return HTML for the ticker name + accent bar row. Always light text on dark section bg."""
     dark = THEME["dark"]
@@ -434,6 +480,20 @@ def search_and_add_ticker(new_ticker):
             if new_ticker_upper not in [
                 t.upper() for t in st.session_state.tickers
             ]:
+                is_valid_ticker, provider_down = validate_ticker_with_yfinance(new_ticker_upper)
+                trace_event(
+                    "search.validation_result",
+                    ticker=new_ticker_upper,
+                    is_valid_ticker=is_valid_ticker,
+                    provider_down=provider_down,
+                )
+                if provider_down:
+                    st.error(YFINANCE_PROVIDER_DOWN_MESSAGE)
+                    return False
+                if not is_valid_ticker:
+                    st.warning(f"Ticker '{new_ticker_upper}' was not found.")
+                    return False
+
                 trace_event("search.add_new_ticker", ticker=new_ticker_upper)
                 st.session_state.tickers.insert(0, new_ticker_upper)
             else:
