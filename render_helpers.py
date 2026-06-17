@@ -4,6 +4,10 @@ import streamlit as st
 import streamlit.components.v1 as components
 from utils import market_status
 from trace_utils import trace_event
+from data_handler import (
+    YFINANCE_PROVIDER_DOWN_MESSAGE,
+    is_yfinance_provider_down,
+)
 
 
 THEME = {
@@ -59,11 +63,11 @@ THEME = {
     },
 }
 
-YFINANCE_PROVIDER_DOWN_MESSAGE = "yfinance data provider is down, please try later"
 _YFINANCE_PROVIDER_ERROR_MARKERS = (
     "try after a while",
     "failed download",
     "yfr",
+    "yfratelimiterror",
     "rate limit",
     "rate-limit",
     "too many requests",
@@ -422,7 +426,7 @@ def validate_ticker_with_yfinance(ticker):
     except Exception as exc:
         error_text = f"{type(exc).__name__}: {exc}"
         trace_event("search.validation_exception", ticker=ticker, error=error_text)
-        return False, _is_yfinance_provider_failure(error_text)
+        return False, is_yfinance_provider_down(ticker, exc)
 
     shared_error = _yfinance_shared_error(ticker)
     if shared_error:
@@ -431,7 +435,7 @@ def validate_ticker_with_yfinance(ticker):
     if data is not None and not getattr(data, "empty", True):
         return True, False
 
-    return False, _is_yfinance_provider_failure(shared_error)
+    return False, is_yfinance_provider_down(ticker) or _is_yfinance_provider_failure(shared_error)
 
 
 def ticker_header_html(ticker, theme_name=None):

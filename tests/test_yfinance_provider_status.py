@@ -7,6 +7,13 @@ def test_provider_down_detects_try_after_exception():
     assert data_handler.is_yfinance_provider_down("TSLA", exc)
 
 
+def test_provider_down_detects_yfinance_rate_limit_exception_type():
+    YFRateLimitError = type("YFRateLimitError", (Exception,), {})
+    exc = YFRateLimitError("Too Many Requests")
+
+    assert data_handler.is_yfinance_provider_down("TSLA", exc)
+
+
 def test_provider_down_detects_shared_yfinance_error(monkeypatch):
     monkeypatch.setattr(
         data_handler.yf_shared,
@@ -28,5 +35,5 @@ def test_provider_down_ignores_plain_invalid_ticker_error(monkeypatch):
 def test_provider_down_message_text_is_stable():
     assert (
         data_handler.YFINANCE_PROVIDER_DOWN_MESSAGE
-        == "yfinance data provider is down, please try later"
+        == "Data Provider yfinance is currently down. Please try again later."
     )
