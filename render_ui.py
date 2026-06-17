@@ -282,8 +282,21 @@ def render_ui():
 
     if new_ticker:
         trace_event("render_ui.before_search_and_add", new_ticker=new_ticker)
-        search_and_add_ticker(new_ticker)
-        trace_event("render_ui.after_search_and_add", new_ticker=new_ticker)
+        search_result = search_and_add_ticker(new_ticker)
+        trace_event("render_ui.after_search_and_add", new_ticker=new_ticker, result=str(search_result))
+        if search_result is True:
+            # Ticker added/selected: delete widget key so text_input re-renders empty, then rerun
+            # so multiselect picks up updated selected_tickers on the fresh render cycle.
+            if "new_ticker_input" in st.session_state:
+                del st.session_state["new_ticker_input"]
+            st.session_state.new_ticker = ""
+            st.rerun()
+        elif search_result is None:
+            # Guard fired (already processed): clear bar without forcing a rerun
+            if "new_ticker_input" in st.session_state:
+                del st.session_state["new_ticker_input"]
+            st.session_state.new_ticker = ""
+        # search_result is False (invalid ticker): leave bar so user sees the warning
     if st.session_state.new_ticker:
         trace_event("render_ui.clear_new_ticker", value=st.session_state.new_ticker)
     st.session_state.new_ticker = ""

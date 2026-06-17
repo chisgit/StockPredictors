@@ -399,8 +399,9 @@ def ticker_header_html(ticker, theme_name=None):
 
 
 def search_and_add_ticker(new_ticker):
-    # Clears out the ticker if there's a change in removing the ticker
-    # This way it doesn't keep appearing in the search bar after it's been removed
+    # Returns True  → ticker added/selected: caller should clear bar and rerun
+    # Returns None  → guard fired (already processed): caller should clear bar, no forced rerun
+    # Returns False → invalid/empty: keep bar so user sees warning
     if new_ticker != st.session_state.new_ticker:
         st.session_state.new_ticker = new_ticker
         trace_event("search.state_updated", new_ticker=new_ticker)
@@ -410,11 +411,11 @@ def search_and_add_ticker(new_ticker):
             new_ticker_upper = new_ticker.strip().upper()
             if not new_ticker_upper:
                 trace_event("search.invalid_or_empty", new_ticker=new_ticker)
-                return
+                return False
 
             if st.session_state.get("last_processed_ticker_search") == new_ticker_upper:
                 trace_event("search.skip_already_processed", ticker=new_ticker_upper)
-                return
+                return None
 
             trace_event(
                 "search.enter",
@@ -427,6 +428,7 @@ def search_and_add_ticker(new_ticker):
                 trace_event("search.invalid_or_empty", new_ticker=new_ticker)
                 st.session_state.last_processed_ticker_search = new_ticker_upper
                 st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
+                return False
             else:
                 st.session_state.last_processed_ticker_search = new_ticker_upper
                 if new_ticker_upper not in [
@@ -455,6 +457,9 @@ def search_and_add_ticker(new_ticker):
                         )
                     else:
                         trace_event("search.already_selected", ticker=new_ticker_upper)
+                return True
         except Exception as e:
             trace_event("search.exception", new_ticker=new_ticker, error=str(e))
             st.error(f"Error: {e}")
+            return False
+    return False
