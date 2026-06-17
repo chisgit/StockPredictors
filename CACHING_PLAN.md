@@ -3,10 +3,10 @@
 ## Status
 | Item | Status |
 |------|--------|
-| CSV data cache (`fetch_data`) | 🔄 in progress |
-| Model cache (`train_model`) | 🔄 in progress |
-| `known_tickers.json` skip list | 🔄 in progress |
-| `models/` dir + gitignore | 🔄 in progress |
+| CSV data cache (`fetch_data`) | ✅ done — ba2ec42 |
+| Model cache (`train_model`) | ✅ done — ba2ec42 |
+| `known_tickers.json` skip list | ✅ done — ba2ec42 |
+| `models/` dir + gitignore | ✅ done — ba2ec42 |
 
 ---
 
