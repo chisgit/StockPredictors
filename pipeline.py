@@ -53,7 +53,7 @@ def execute_pipeline(tickers):
     skipped_tickers = []  # Track tickers that couldn't be processed
 
     for ticker in tickers:
-        st.markdown(f"Processing {ticker}...")
+        st.write(f"⏳ Fetching & training **{ticker}**...")
         trace_event("pipeline.ticker_start", ticker=ticker)
 
         try:

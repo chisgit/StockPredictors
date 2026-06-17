@@ -211,17 +211,13 @@ def render_ui():
         st.session_state.tickers = UI_RULES["default_tickers"]
 
     if "selected_tickers" not in st.session_state:
-        st.session_state.selected_tickers = UI_RULES["default_tickers"].copy()
+        st.session_state.selected_tickers = []
 
     valid_tickers = list(st.session_state.tickers)
     selected_tickers = [
         ticker for ticker in st.session_state.selected_tickers if ticker in valid_tickers
     ]
-    if not selected_tickers:
-        selected_tickers = UI_RULES["default_tickers"].copy()
-        st.session_state.selected_tickers = selected_tickers
-    else:
-        st.session_state.selected_tickers = selected_tickers
+    st.session_state.selected_tickers = selected_tickers
 
     widget_key = "stock_multiselect"
     if widget_key in st.session_state:
@@ -257,21 +253,23 @@ def render_ui():
         on_change=update_selected_tickers,
         args=[widget_key],
         max_selections=UI_RULES["max_tickers"],
+        placeholder="Choose from the list or search below (e.g. TSLA, AAPL, GOOGL...)",
     )
 
     # Update selected tickers based on multiselect
     st.session_state.selected_tickers = tickers
     trace_event("render_ui.after_multiselect", selected=tickers)
 
-    # Search bar for new tickers
+    # Search bar — keyed by counter so incrementing counter creates a fresh widget (clears input).
+    # Streamlit cannot reset a widget's value mid-run via session_state assignment or key deletion;
+    # changing the key is the only reliable approach.
+    search_key = f"new_ticker_input_{st.session_state.search_input_counter}"
     new_ticker = st.text_input(
         "Search for a stock ticker:",
-        value=st.session_state.new_ticker,
-        key="new_ticker_input",
+        value="",
+        key=search_key,
     )
 
-    # This clears out the ticker if there's a change in removing the ticker
-    # this way it doesn't keep appearing in the search bar after it's been removed
     if new_ticker != st.session_state.new_ticker:
         trace_event(
             "render_ui.new_ticker_changed",
@@ -282,8 +280,18 @@ def render_ui():
 
     if new_ticker:
         trace_event("render_ui.before_search_and_add", new_ticker=new_ticker)
-        search_and_add_ticker(new_ticker)
-        trace_event("render_ui.after_search_and_add", new_ticker=new_ticker)
+        search_result = search_and_add_ticker(new_ticker)
+        trace_event("render_ui.after_search_and_add", new_ticker=new_ticker, result=str(search_result))
+        if search_result is True:
+            # Increment counter → next render gets a new key → fresh empty widget.
+            st.session_state.search_input_counter += 1
+            st.session_state.new_ticker = ""
+            st.rerun()
+        elif search_result is None:
+            # Guard fired: clear bar without forcing a rerun
+            st.session_state.search_input_counter += 1
+            st.session_state.new_ticker = ""
+        # search_result is False (invalid ticker): leave bar so user sees the warning
     if st.session_state.new_ticker:
         trace_event("render_ui.clear_new_ticker", value=st.session_state.new_ticker)
     st.session_state.new_ticker = ""
