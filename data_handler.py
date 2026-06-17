@@ -78,7 +78,7 @@ def _download_with_retry(ticker, start_date, end_date):
             start_date=str(start_date),
             end_date=str(end_date),
         )
-        df = yf.download(ticker, start=start_date, end=end_date)
+        df = yf.download(ticker, start=start_date, end=end_date, progress=False)
         trace_event(
             "yfinance.download.finish",
             ticker=ticker,
@@ -89,7 +89,7 @@ def _download_with_retry(ticker, start_date, end_date):
             trace_event("yfinance.download.retryable_failure", ticker=ticker)
             clear_yfinance_cache()
             trace_event("yfinance.download.retry_start", ticker=ticker)
-            df = yf.download(ticker, start=start_date, end=end_date)
+            df = yf.download(ticker, start=start_date, end=end_date, progress=False)
             trace_event(
                 "yfinance.download.retry_finish",
                 ticker=ticker,
@@ -109,7 +109,7 @@ def _download_with_retry(ticker, start_date, end_date):
             if _YF_TEST_CACHE_REFRESH_MESSAGE in message:
                 trace_event("yfinance.test_cache_refresh", ticker=ticker, error=str(exc))
                 clear_yfinance_cache()
-                return yf.download(ticker, start=start_date, end=end_date)
+                return yf.download(ticker, start=start_date, end=end_date, progress=False)
 
         cache_error_signals = (
             "no such table",
@@ -123,7 +123,7 @@ def _download_with_retry(ticker, start_date, end_date):
         if any(signal in message for signal in cache_error_signals) or "operationalerror" in type(exc).__name__.lower():
             trace_event("yfinance.cache_error", ticker=ticker, error=str(exc))
             clear_yfinance_cache()
-            return yf.download(ticker, start=start_date, end=end_date)
+            return yf.download(ticker, start=start_date, end=end_date, progress=False)
         raise
 
 
