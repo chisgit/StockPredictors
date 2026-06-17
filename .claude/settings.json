@@ -5,7 +5,20 @@
       "Skill(run:*)",
       "PowerShell(Start-Process -FilePath \"C:\\\\Users\\\\User\\\\StockPredictors\\\\venv\\\\Scripts\\\\streamlit.exe\" -ArgumentList \"run\",\"stock_predictors.py\",\"--server.port\",\"8501\" -WorkingDirectory \"C:\\\\Users\\\\User\\\\StockPredictors\" -WindowStyle Normal)",
       "PowerShell(Get-Process streamlit -ErrorAction SilentlyContinue)",
-      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)"
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "Bash(Start-Process -FilePath \"C:\\\\Users\\\\User\\\\StockPredictors\\\\venv\\\\Scripts\\\\streamlit.exe\" -ArgumentList \"run\",\"stock_predictors.py\",\"--server.port\",\"8503\" -WorkingDirectory \"C:\\\\Users\\\\User\\\\StockPredictors-search-autoselect\" -WindowStyle Normal)",
+      "PowerShell(Start-Process -FilePath \"C:\\\\Users\\\\User\\\\StockPredictors\\\\venv\\\\Scripts\\\\streamlit.exe\" -ArgumentList \"run\",\"stock_predictors.py\",\"--server.port\",\"8503\" -WorkingDirectory \"C:\\\\Users\\\\User\\\\StockPredictors-search-autoselect\" -WindowStyle Normal)",
+      "Read(//c/Users/User/StockPredictors/**)",
+      "PowerShell(Start-Sleep -Seconds 4; \\(Invoke-WebRequest -Uri \"http://localhost:8503\" -TimeoutSec 5 -UseBasicParsing\\).StatusCode)",
+      "PowerShell(Test-Path \"C:\\\\Users\\\\User\\\\StockPredictors-search-autoselect\"; \\(Get-ChildItem \"C:\\\\Users\\\\User\\\\StockPredictors-search-autoselect\" -ErrorAction SilentlyContinue | Measure-Object\\).Count)",
+      "PowerShell(netstat -ano | findstr \":8503\" | ForEach-Object { \\($_ -split '\\\\s+'\\)[-1] } | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Host \"Killed 8503\")",
+      "PowerShell(Start-Process -FilePath \"C:\\\\Users\\\\User\\\\StockPredictors\\\\venv\\\\Scripts\\\\streamlit.exe\" -ArgumentList \"run\",\"stock_predictors.py\",\"--server.port\",\"8503\" -WorkingDirectory \"C:\\\\Users\\\\User\\\\SP-search-fix\" -WindowStyle Normal)",
+      "PowerShell(Start-Sleep -Seconds 5; \\(Invoke-WebRequest -Uri \"http://localhost:8503\" -TimeoutSec 5 -UseBasicParsing\\).StatusCode)",
+      "PowerShell(npx playwright --version 2>&1)",
+      "PowerShell(python -m playwright --version 2>&1)",
+      "PowerShell(python -m playwright install chromium 2>&1)",
+      "PowerShell(\\(Invoke-WebRequest -Uri \"http://localhost:8503\" -TimeoutSec 3 -UseBasicParsing\\).StatusCode)",
+      "PowerShell(netstat -ano | findstr \":8503\" | ForEach-Object { \\($_ -split '\\\\s+'\\)[-1] } | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Host \"8503 killed\")"
     ]
   }
 }
