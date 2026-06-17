@@ -227,6 +227,14 @@ def render_ui():
                 valid_tickers=valid_tickers,
             )
             del st.session_state[widget_key]
+        elif list(current_widget_value) != selected_tickers:
+            trace_event(
+                "render_ui.delete_stale_widget_state",
+                widget_key=widget_key,
+                widget_value=current_widget_value,
+                selected_tickers=selected_tickers,
+            )
+            del st.session_state[widget_key]
 
     # Add warning if max tickers limit is reached
     if len(st.session_state.selected_tickers) >= UI_RULES["max_tickers"]:
