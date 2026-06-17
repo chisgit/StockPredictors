@@ -34,9 +34,13 @@ def train_model(
     last_data_date = train_ready_data.index[-1].strftime("%Y-%m-%d")
     model_path = _MODELS_DIR / f"{current_ticker}_{last_data_date}_{model_type}_{target}.pkl"
     if model_path.exists():
-        model, scalers = joblib.load(model_path)
-        print(f"Loaded cached model: {model_path.name}")
-        return model, scalers
+        try:
+            model, scalers = joblib.load(model_path)
+            print(f"Loaded cached model: {model_path.name}")
+            return model, scalers
+        except Exception as exc:
+            print(f"Cached model load failed ({exc}), retraining")
+            model_path.unlink(missing_ok=True)
 
     print(f"\nTraining {model_type} model for {target}'s close")
     print(f"Training model for ticker: {current_ticker}")

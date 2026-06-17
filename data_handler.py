@@ -262,21 +262,25 @@ def fetch_data(ticker, end_date, start_date="2008-01-01", use_local_data=False):
 
         # Stale — delta fetch since last row date
         df = custom_read_csv(local_file)
-        last_date = df.index[-1]
-        delta_start = (last_date + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-        trace_event("fetch_data.delta_start", ticker=ticker, delta_start=delta_start)
-        delta_df = _download_with_retry(ticker, delta_start, end_date)
-        if not delta_df.empty:
-            delta_df = _normalize_columns(delta_df)
-            df = pd.concat([df, delta_df])
-            df = df[~df.index.duplicated(keep="last")]
-            df.index.name = "Date"
-            df.to_csv(local_file)
-            trace_event("fetch_data.delta_saved", ticker=ticker, new_rows=len(delta_df))
+        if df.empty:
+            os.remove(local_file)
+            trace_event("fetch_data.corrupt_cache_removed", ticker=ticker)
         else:
-            trace_event("fetch_data.delta_empty", ticker=ticker)
-        _record_known_ticker(ticker)
-        return df
+            last_date = df.index[-1]
+            delta_start = (last_date + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+            trace_event("fetch_data.delta_start", ticker=ticker, delta_start=delta_start)
+            delta_df = _download_with_retry(ticker, delta_start, end_date)
+            if not delta_df.empty:
+                delta_df = _normalize_columns(delta_df)
+                df = pd.concat([df, delta_df])
+                df = df[~df.index.duplicated(keep="last")]
+                df.index.name = "Date"
+                df.to_csv(local_file)
+                trace_event("fetch_data.delta_saved", ticker=ticker, new_rows=len(delta_df))
+            else:
+                trace_event("fetch_data.delta_empty", ticker=ticker)
+            _record_known_ticker(ticker)
+            return df
 
     # No cache — full fetch
     trace_event("fetch_data.full_start", ticker=ticker, start_date=str(start_date), end_date=str(end_date))
