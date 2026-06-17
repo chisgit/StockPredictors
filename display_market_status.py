@@ -4,21 +4,21 @@ from render_helpers import _resolve_theme
 
 
 def generate_market_status_header(status, last_date_str, today_is_trading_day=True):
-    """Single status-driven header (icon + title, left-aligned).
+    """Single status-driven header with simple title and contextual subtitle.
 
-    The title carries everything inline (no separate subtitle). `last_date_str`
-    is the last completed session's date (data.index[-1]).
+    The title is intentionally limited to market state. The subtitle carries the
+    prior contextual copy, including what data/prediction frame is being shown.
 
     Title by state:
       - BEFORE_MARKET_OPEN (trading day, pre-bell):
-            "Market Closed - Displaying Predictions for <last traded date>"
+            "Market is Closed" / "Displaying Predictions for <last traded date>"
       - MARKET_OPEN:
-            "Live — Last Traded"
+            "Market is Open" / "Live — Last Traded"
       - AFTER_MARKET_CLOSE on a trading day (today's close is final):
-            "Today's Close Predictions and Actuals"
+            "Market is Closed" / "Today's Close Predictions and Actuals"
       - AFTER_MARKET_CLOSE on a weekend/holiday (today never traded):
-            "Market Closed Weekend/Holiday - Displaying Predictions for
-             <last traded date>"
+            "Market is Closed (Weekend/Holiday)" /
+            "Displaying Predictions for <last traded date>"
 
     `today_is_trading_day` only matters for AFTER_MARKET_CLOSE — it splits the
     trading-day-after-close case from the weekend/holiday case, which
@@ -26,16 +26,18 @@ def generate_market_status_header(status, last_date_str, today_is_trading_day=Tr
     """
     subtitle = ""
     if status == "MARKET_OPEN":
-        icon, title = "🔔", "Live — Last Traded"
+        icon, title = "🔔", "Market is Open"
+        subtitle = "Live — Last Traded"
     elif status == "BEFORE_MARKET_OPEN":
-        icon, title = "🔴", "Market Closed"
+        icon, title = "🔴", "Market is Closed"
         subtitle = f"Displaying Predictions for {last_date_str}"
     elif status == "AFTER_MARKET_CLOSE":
         icon = "🔴"
         if today_is_trading_day:
-            title = "Today's Close Predictions and Actuals"
+            title = "Market is Closed"
+            subtitle = "Today's Close Predictions and Actuals"
         else:
-            title = "Market Closed Weekend/Holiday"
+            title = "Market is Closed (Weekend/Holiday)"
             subtitle = f"Displaying Predictions for {last_date_str}"
     else:
         raise ValueError(f"Unknown market status: {status}")

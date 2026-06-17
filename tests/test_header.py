@@ -5,12 +5,11 @@ state. Locks: one left-aligned header, status-driven title, inline icon, and
 the after-close trading-day vs weekend/holiday split. Pure function, no
 Streamlit / no time dependence, so it is deterministic.
 
-State → header copy:
-  BEFORE_MARKET_OPEN          → "Market Closed - Displaying Predictions for <date>"
-  MARKET_OPEN                 → "Live — Last Traded" (no date)
-  AFTER_MARKET_CLOSE, trading → "Today's Close Predictions and Actuals" (no date)
-  AFTER_MARKET_CLOSE, off-day → "Market Closed Weekend/Holiday - Displaying
-                                 Predictions for <date>"
+State -> header copy:
+  BEFORE_MARKET_OPEN          -> "Market is Closed" + date subtitle
+  MARKET_OPEN                 -> "Market is Open" + "Live - Last Traded" subtitle
+  AFTER_MARKET_CLOSE, trading -> "Market is Closed" + finality subtitle
+  AFTER_MARKET_CLOSE, off-day -> "Market is Closed (Weekend/Holiday)" + date subtitle
 """
 from datetime import date
 
@@ -26,24 +25,26 @@ def test_before_open_shows_last_traded_date():
     html = generate_market_status_header("BEFORE_MARKET_OPEN", DATE)
     assert "🔴" in html
     # status title on its own line; date in a separate muted subtitle (uses theme token)
-    assert "Market Closed" in html
+    assert "Market is Closed" in html
     assert f"Displaying Predictions for {DATE}" in html
     assert "color: #64748b" in html  # dark theme text_delta_label
     assert " - Displaying" not in html
 
 
-def test_market_open_live_no_date():
+def test_market_open_live_subtitle_no_date():
     html = generate_market_status_header("MARKET_OPEN", DATE)
     assert "🔔" in html
+    assert "Market is Open" in html
     assert "Live — Last Traded" in html
     assert DATE not in html
 
 
-def test_after_close_trading_day_predictions_and_actuals():
+def test_after_close_trading_day_closed_title_and_finality_subtitle():
     html = generate_market_status_header(
         "AFTER_MARKET_CLOSE", DATE, today_is_trading_day=True
     )
     assert "🔴" in html
+    assert "Market is Closed" in html
     assert "Today's Close Predictions and Actuals" in html
     # today's close is final → no last-traded date in the title
     assert DATE not in html
@@ -54,7 +55,7 @@ def test_after_close_weekend_holiday_shows_last_traded_date():
         "AFTER_MARKET_CLOSE", DATE, today_is_trading_day=False
     )
     assert "🔴" in html
-    assert "Market Closed Weekend/Holiday" in html
+    assert "Market is Closed (Weekend/Holiday)" in html
     assert f"Displaying Predictions for {DATE}" in html
     assert " - Displaying" not in html
 
