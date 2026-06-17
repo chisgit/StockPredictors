@@ -69,7 +69,7 @@ def _resolve_theme(theme_name):
     return THEME.get(name, THEME["light"])
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300, show_spinner=False)
 def get_recent_data(ticker):
     """Download recent stock data for the given ticker."""
     try:
