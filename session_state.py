@@ -19,6 +19,9 @@ def initialize_session_state():
     if 'search_input_counter' not in st.session_state:
         st.session_state.search_input_counter = 0
 
+    if 'multiselect_counter' not in st.session_state:
+        st.session_state.multiselect_counter = 0
+
     if 'run_prediction' not in st.session_state:
         st.session_state.run_prediction = False
 

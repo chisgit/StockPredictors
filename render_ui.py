@@ -171,10 +171,10 @@ def display_results(predictions, skipped_tickers=None):
 
 
 def update_selected_tickers(change):
-    print(f"[UPDATE] Change: {change}")  # This is the key "stock_multiselect"
+    print(f"[UPDATE] Change: {change}")  # This is the dynamic stock_multiselect key
 
     # Get the current multiselect state
-    updated_sel_tickers = st.session_state.stock_multiselect
+    updated_sel_tickers = st.session_state.get(change, [])
     pending_autoselect = st.session_state.get("pending_autoselect_ticker")
 
     if pending_autoselect:
@@ -239,7 +239,10 @@ def render_ui():
     ]
     st.session_state.selected_tickers = selected_tickers
 
-    widget_key = "stock_multiselect"
+    if "multiselect_counter" not in st.session_state:
+        st.session_state.multiselect_counter = 0
+
+    widget_key = f"stock_multiselect_{st.session_state.multiselect_counter}"
     if widget_key in st.session_state:
         current_widget_value = st.session_state[widget_key]
         if not isinstance(current_widget_value, list) or any(
@@ -303,8 +306,10 @@ def render_ui():
         search_result = search_and_add_ticker(new_ticker)
         trace_event("render_ui.after_search_and_add", new_ticker=new_ticker, result=str(search_result))
         if search_result is True:
-            # Increment counter → next render gets a new key → fresh empty widget.
+            # Increment counters → next render gets fresh widgets. This keeps
+            # both the search input and multiselect in sync with session state.
             st.session_state.search_input_counter += 1
+            st.session_state.multiselect_counter += 1
             st.session_state.new_ticker = ""
             st.rerun()
         elif search_result is None:
