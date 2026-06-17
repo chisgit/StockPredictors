@@ -1,117 +1,20 @@
-# Handoff
+# HANDOFF — StockPredictors
+Updated: 2026-06-17 | Branch: `main` @ `3404a86`
 
 ## Workspace
 - Path: `c:\Users\User\StockPredictors`
-- Date: 2026-06-17
-- Branch: `main` @ `4822edd` — local modifications to `.claude/settings.json`, `CLAUDE.md`, `HANDOFF.md`; untracked `graphify-out/`
-- Secondary worktree: `C:\Users\User\StockPredictors-market-status` on `investigate-market-status`
+- Production: `https://stockpredictors.onrender.com` (Render `srv-csvanmqj1k6c73c3dnt0`)
+- Secondary worktree: none active
 
----
-
-## Workflow rules (binding on next session)
-- **Manual test before commit/PR/merge** — verify each UI change in the live app before staging.
-- **New plan sections → dedicated `*_PLAN.md`** — `DARK_MODE_PLAN.md` archived at `archive/plans/`. Create a new plan file when the next feature scope grows.
-- **pytest -q green before merge** — every branch runs the full suite.
-
----
-
-## App shape / orientation
-
-| Item | Detail |
-|------|--------|
-| Entry point | [stock_predictors.py](stock_predictors.py) |
-| UI render | [render_ui.py](render_ui.py), [render_helpers.py](render_helpers.py) |
-| Session state | [session_state.py](session_state.py) |
-| Search logic | [render_helpers.py](render_helpers.py) `search_and_add_ticker` |
-| Data fetch | [data_handler.py](data_handler.py) `fetch_data()` at line 217 |
-| Model train | [model.py](model.py) `train_model()` at line 10 |
-| Plan doc | [UI_UX_PLAN.md](UI_UX_PLAN.md) — **status: Complete** |
-| Run (main) | `C:\Users\User\StockPredictors\venv\Scripts\streamlit.exe run stock_predictors.py` (port 8501) |
-| Run (worktree) | `-WorkingDirectory <worktree-path>` + port 8502+ |
-
----
-
-## Current state — all prior planned work done
-
-[UI_UX_PLAN.md](UI_UX_PLAN.md) is **Complete**. All §0–§7 visual/UX items, all dark mode items (DM1–DM6), search flow, card spacing, and production search regression — all merged and verified in production. No in-flight branches or worktrees.
-
----
-
-## Key domain facts (permanent)
-
-### Streamlit widget reset — counter key pattern
-`del`/assignment both fail to clear a text_input on programmatic reruns — browser value wins. Only reliable reset: increment `search_input_counter` in session state, use it in `key=`.
-
-### Streamlit multiselect auto-select
-Multiselect renders before `search_and_add_ticker`. `st.rerun()` after add is required for one-cycle sync.
-
-### `search_and_add_ticker` tri-state return
-- `True` — added/selected → increment counter + `st.rerun()`
-- `None` — guard fired → increment counter, no rerun
-- `False` — invalid → leave bar, warning visible
-
----
-
-## Next task — Training pipeline caching
-
-**Branch to create:** `training-cache`  
-**Create `CACHING_PLAN.md` at project root before coding.**
-
-### Design decisions (locked this session)
-
-**CSV data cache** — `fetch_data()` at [data_handler.py:217](data_handler.py#L217)
-- First fetch: pull full 2008→now, save `{ticker}_data.csv`
-- On Predict click: load CSV, check last row timestamp
-  - If last row age < 30s → use CSV as-is
-  - If last row age ≥ 30s → fetch delta since last row date, append to CSV
-- Historical rows are **immutable** — never re-fetch past data
-- 30s threshold is on Predict click only, not background polling
-
-**Model cache** — `train_model()` at [model.py:10](model.py#L10)
-- Save trained model + scalers to `models/{ticker}_{date}_{model_type}.pkl` after train
-- On Predict: if same-calendar-day file exists → load, skip retrain
-- One retrain per ticker per calendar day max
-
-**Ticker known-list**
-- After successful data fetch, record ticker in `known_tickers.json`
-- Skip yfinance validation calls for tickers already in the list
-
-### Scope: 3 files + 2 new artifacts
-- [data_handler.py](data_handler.py) — `fetch_data()` + incremental delta fetch logic
-- [model.py](model.py) — `train_model()` + joblib save/load wrapper
-- `models/` dir (new, gitignore)
-- `known_tickers.json` (new, gitignore or commit empty stub)
-
----
-
-## Possible future directions (after caching)
-- Prediction model improvements (accuracy, new models)
-- More tickers / data sources
-- Portfolio view / multi-ticker comparison
-- Deployment / production hardening
-
----
-
-## Locked decisions
-- Counter key (`search_input_counter`) — canonical Streamlit text_input reset.
-- `st.rerun()` after ticker add — required for multiselect sync.
-- `search_and_add_ticker` tri-state — `None` must not force rerun.
-- Dark mode default; toggle via `st.session_state.theme`.
-- CSV cache: 30s staleness on Predict click, delta-only fetch, historical immutable.
-- Model cache: same-day TTL, joblib, `models/` dir.
-
----
-
-## How to verify / run
-
+## Run commands
 ```powershell
-# Run main app
+# Main app
 & "C:\Users\User\StockPredictors\venv\Scripts\streamlit.exe" run stock_predictors.py
 
-# Run worktree app
+# Worktree app (port 8502+)
 Start-Process -FilePath "C:\Users\User\StockPredictors\venv\Scripts\streamlit.exe" `
   -ArgumentList "run","stock_predictors.py","--server.port","8502" `
-  -WorkingDirectory "C:\Users\User\<worktree-dir>" -WindowStyle Normal
+  -WorkingDirectory "C:\Users\User\StockPredictors-<branch>" -WindowStyle Normal
 
 # Kill a port
 netstat -ano | findstr ":<port>" | ForEach-Object { ($_ -split '\s+')[-1] } | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
@@ -124,3 +27,31 @@ $env:MARKET_NOW = "2026-06-17 10:00"   # open
 $env:MARKET_NOW = "2026-06-14 18:00"   # Saturday closed
 $env:MARKET_NOW = ""                    # clear
 ```
+
+## Key files
+| Role | File |
+|------|------|
+| Entry | [stock_predictors.py](stock_predictors.py) |
+| UI render | [render_ui.py](render_ui.py), [render_helpers.py](render_helpers.py) |
+| Session state | [session_state.py](session_state.py) |
+| Data fetch | [data_handler.py](data_handler.py) `fetch_data()` L217 |
+| Model train | [model.py](model.py) `train_model()` L10 |
+
+## Active branches
+| Branch | Plan doc | Status | Priority |
+|--------|----------|--------|----------|
+| training-cache | [CACHING_PLAN.md](CACHING_PLAN.md) | ⬜ not started | 1 — next |
+
+## Workflow rules
+- Manual test before commit/PR/merge — verify each UI change in the live app
+- pytest -q green before merge
+- Branch → PR → review → merge → delete (no direct commits to main)
+- New feature scope → dedicated `*_PLAN.md`
+
+## Locked decisions
+- Streamlit text_input reset: increment `search_input_counter` in session state, use in `key=`
+- `st.rerun()` after ticker add — required for multiselect one-cycle sync
+- `search_and_add_ticker` tri-state: `True` = added, `None` = guard fired (no rerun), `False` = invalid
+- Dark mode default; toggle via `st.session_state.theme`
+- Do not validate ticker with yfinance before selecting — prediction pipeline is source of truth
+- Use `pandas_market_calendars` / XNYS for trading-day checks, not clock time

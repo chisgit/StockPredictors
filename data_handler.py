@@ -2,10 +2,15 @@ import yfinance as yf
 import yfinance.shared as yf_shared
 import pandas as pd
 import os
+import time
+import json
 import threading
 from pathlib import Path
 import shutil
 from trace_utils import trace_event
+
+KNOWN_TICKERS_FILE = "known_tickers.json"
+_CACHE_FRESH_SECONDS = 30
 
 try:
     from yfinance import cache as yf_cache
@@ -18,12 +23,13 @@ _YF_RETRY_ERROR_MARKERS = (
     "try after a while",
     "failed download",
     "yfr",
+    "yfratelimiterror",
     "runtimeerror",
     "rate limit",
     "rate-limit",
     "too many requests",
 )
-YFINANCE_PROVIDER_DOWN_MESSAGE = "yfinance data provider is down, please try later"
+YFINANCE_PROVIDER_DOWN_MESSAGE = "Data Provider yfinance is currently down. Please try again later."
 
 
 def _default_yfinance_cache_dir():
@@ -187,6 +193,28 @@ def invalidate_yfinance_cache():
     clear_yfinance_cache()
     return True
 
+def _load_known_tickers():
+    if os.path.exists(KNOWN_TICKERS_FILE):
+        try:
+            with open(KNOWN_TICKERS_FILE) as f:
+                return set(json.load(f))
+        except Exception:
+            pass
+    return set()
+
+
+def _record_known_ticker(ticker):
+    known = _load_known_tickers()
+    if ticker not in known:
+        known.add(ticker)
+        with open(KNOWN_TICKERS_FILE, "w") as f:
+            json.dump(sorted(known), f)
+
+
+def is_known_ticker(ticker):
+    return ticker in _load_known_tickers()
+
+
 def custom_read_csv(file_path):
     """
     Read and parse the custom CSV file format with Type/Ticker headers.
@@ -214,42 +242,56 @@ def custom_read_csv(file_path):
     
     return df
 
+def _normalize_columns(df):
+    if not isinstance(df.columns, pd.MultiIndex):
+        df.columns = pd.MultiIndex.from_product(
+            [["Price"], df.columns], names=["Type", "Ticker"]
+        )
+    return df
+
+
 def fetch_data(ticker, end_date, start_date="2008-01-01", use_local_data=False):
-    """
-    Fetch historical data for a given ticker, either from local file or yfinance.
-    """
+    """Fetch stock data. Cache: CSV per ticker, delta-only after 30s staleness."""
     local_file = f"{ticker}_data.csv"
 
-    if use_local_data and os.path.exists(local_file):
-        trace_event("fetch_data.local_file", ticker=ticker, path=local_file)
-        df = custom_read_csv(local_file)
-        print(f"Loaded data from local file: {local_file}")
-    else:
-        # Fetch data from yfinance
-        trace_event(
-            "fetch_data.remote_start",
-            ticker=ticker,
-            start_date=str(start_date),
-            end_date=str(end_date),
-        )
-        df = _download_with_retry(ticker, start_date, end_date)
-        
-        # Create MultiIndex columns if not already present
-        if not isinstance(df.columns, pd.MultiIndex):
-            df.columns = pd.MultiIndex.from_product(
-                [['Price'], df.columns],
-                names=['Type', 'Ticker']
-            )
-        
-        # Save to CSV with custom format
-        if not df.empty:
-            # Prepare the DataFrame for saving
-            df_to_save = df.copy()
-            df_to_save.index.name = 'Date'
-            df_to_save.to_csv(local_file)
-            trace_event("fetch_data.remote_saved", ticker=ticker, path=local_file, rows=len(df))
-        else:
-            trace_event("fetch_data.remote_empty", ticker=ticker)
-            raise ValueError(f"No data retrieved for ticker {ticker} from yfinance")
+    if os.path.exists(local_file):
+        file_age = time.time() - os.path.getmtime(local_file)
+        if file_age < _CACHE_FRESH_SECONDS:
+            trace_event("fetch_data.cache_hit", ticker=ticker, age_s=round(file_age, 1))
+            return custom_read_csv(local_file)
 
+        # Stale — delta fetch since last row date
+        df = custom_read_csv(local_file)
+        if df.empty:
+            os.remove(local_file)
+            trace_event("fetch_data.corrupt_cache_removed", ticker=ticker)
+        else:
+            last_date = df.index[-1]
+            delta_start = (last_date + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+            trace_event("fetch_data.delta_start", ticker=ticker, delta_start=delta_start)
+            delta_df = _download_with_retry(ticker, delta_start, end_date)
+            if not delta_df.empty:
+                delta_df = _normalize_columns(delta_df)
+                df = pd.concat([df, delta_df])
+                df = df[~df.index.duplicated(keep="last")]
+                df.index.name = "Date"
+                df.to_csv(local_file)
+                trace_event("fetch_data.delta_saved", ticker=ticker, new_rows=len(delta_df))
+            else:
+                trace_event("fetch_data.delta_empty", ticker=ticker)
+            _record_known_ticker(ticker)
+            return df
+
+    # No cache — full fetch
+    trace_event("fetch_data.full_start", ticker=ticker, start_date=str(start_date), end_date=str(end_date))
+    df = _download_with_retry(ticker, start_date, end_date)
+    df = _normalize_columns(df)
+    if not df.empty:
+        df.index.name = "Date"
+        df.to_csv(local_file)
+        trace_event("fetch_data.full_saved", ticker=ticker, path=local_file, rows=len(df))
+        _record_known_ticker(ticker)
+    else:
+        trace_event("fetch_data.full_empty", ticker=ticker)
+        raise ValueError(f"No data retrieved for ticker {ticker} from yfinance")
     return df

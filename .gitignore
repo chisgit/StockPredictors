@@ -30,3 +30,9 @@ build/
 
 # Local cached ticker data (regenerated at runtime)
 *_data.csv
+
+# Trained model cache (regenerated at runtime)
+models/
+
+# Known tickers list (regenerated at runtime)
+known_tickers.json
