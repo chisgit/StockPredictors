@@ -1,4 +1,5 @@
 import pandas as pd
+import streamlit as st
 
 import render_helpers
 
@@ -51,3 +52,20 @@ def test_provider_down_message_text_is_stable():
         render_helpers.YFINANCE_PROVIDER_DOWN_MESSAGE
         == "yfinance data provider is down, please try later"
     )
+
+
+def test_search_skips_yfinance_validation_when_ticker_already_selected(monkeypatch):
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("Already selected ticker should not call yfinance validation")
+
+    st.session_state.clear()
+    st.session_state.new_ticker = ""
+    st.session_state.selected_tickers = ["TSLA"]
+    st.session_state.tickers = ["TSLA", "AAPL"]
+
+    monkeypatch.setattr(render_helpers, "validate_ticker_with_yfinance", fail_if_called)
+
+    assert render_helpers.search_and_add_ticker("tsla") is True
+    assert st.session_state.selected_tickers == ["TSLA"]
+    assert st.session_state.tickers == ["TSLA", "AAPL"]
+    assert st.session_state.last_processed_ticker_search == "TSLA"
