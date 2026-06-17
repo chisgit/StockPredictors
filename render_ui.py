@@ -303,8 +303,7 @@ def render_ui():
 
     if new_ticker:
         trace_event("render_ui.before_search_and_add", new_ticker=new_ticker)
-        with st.spinner("Checking ticker..."):
-            search_result = search_and_add_ticker(new_ticker)
+        search_result = search_and_add_ticker(new_ticker)
         trace_event("render_ui.after_search_and_add", new_ticker=new_ticker, result=str(search_result))
         if search_result is True:
             # Increment counters → next render gets fresh widgets. This keeps
