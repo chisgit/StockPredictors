@@ -3,7 +3,7 @@
 ## Workspace
 - Path: `c:\Users\User\StockPredictors`
 - Date: 2026-06-17
-- Branch: `main` @ `65da3ce` — clean, pushed
+- Branch: `main` @ `4822edd` — local modifications to `.claude/settings.json`, `CLAUDE.md`, `HANDOFF.md`; untracked `graphify-out/`
 - Secondary worktree: `C:\Users\User\StockPredictors-market-status` on `investigate-market-status`
 
 ---
@@ -23,13 +23,15 @@
 | UI render | [render_ui.py](render_ui.py), [render_helpers.py](render_helpers.py) |
 | Session state | [session_state.py](session_state.py) |
 | Search logic | [render_helpers.py](render_helpers.py) `search_and_add_ticker` |
+| Data fetch | [data_handler.py](data_handler.py) `fetch_data()` at line 217 |
+| Model train | [model.py](model.py) `train_model()` at line 10 |
 | Plan doc | [UI_UX_PLAN.md](UI_UX_PLAN.md) — **status: Complete** |
 | Run (main) | `C:\Users\User\StockPredictors\venv\Scripts\streamlit.exe run stock_predictors.py` (port 8501) |
 | Run (worktree) | `-WorkingDirectory <worktree-path>` + port 8502+ |
 
 ---
 
-## Current state — all planned work done
+## Current state — all prior planned work done
 
 [UI_UX_PLAN.md](UI_UX_PLAN.md) is **Complete**. All §0–§7 visual/UX items, all dark mode items (DM1–DM6), search flow, card spacing, and production search regression — all merged and verified in production. No in-flight branches or worktrees.
 
@@ -50,11 +52,39 @@ Multiselect renders before `search_and_add_ticker`. `st.rerun()` after add is re
 
 ---
 
-## Next task
+## Next task — Training pipeline caching
 
-No tracked tasks remain. Next session should identify new feature work and create a new plan doc or add rows to [UI_UX_PLAN.md](UI_UX_PLAN.md).
+**Branch to create:** `training-cache`  
+**Create `CACHING_PLAN.md` at project root before coding.**
 
-Possible directions to discuss with user:
+### Design decisions (locked this session)
+
+**CSV data cache** — `fetch_data()` at [data_handler.py:217](data_handler.py#L217)
+- First fetch: pull full 2008→now, save `{ticker}_data.csv`
+- On Predict click: load CSV, check last row timestamp
+  - If last row age < 30s → use CSV as-is
+  - If last row age ≥ 30s → fetch delta since last row date, append to CSV
+- Historical rows are **immutable** — never re-fetch past data
+- 30s threshold is on Predict click only, not background polling
+
+**Model cache** — `train_model()` at [model.py:10](model.py#L10)
+- Save trained model + scalers to `models/{ticker}_{date}_{model_type}.pkl` after train
+- On Predict: if same-calendar-day file exists → load, skip retrain
+- One retrain per ticker per calendar day max
+
+**Ticker known-list**
+- After successful data fetch, record ticker in `known_tickers.json`
+- Skip yfinance validation calls for tickers already in the list
+
+### Scope: 3 files + 2 new artifacts
+- [data_handler.py](data_handler.py) — `fetch_data()` + incremental delta fetch logic
+- [model.py](model.py) — `train_model()` + joblib save/load wrapper
+- `models/` dir (new, gitignore)
+- `known_tickers.json` (new, gitignore or commit empty stub)
+
+---
+
+## Possible future directions (after caching)
 - Prediction model improvements (accuracy, new models)
 - More tickers / data sources
 - Portfolio view / multi-ticker comparison
@@ -67,6 +97,8 @@ Possible directions to discuss with user:
 - `st.rerun()` after ticker add — required for multiselect sync.
 - `search_and_add_ticker` tri-state — `None` must not force rerun.
 - Dark mode default; toggle via `st.session_state.theme`.
+- CSV cache: 30s staleness on Predict click, delta-only fetch, historical immutable.
+- Model cache: same-day TTL, joblib, `models/` dir.
 
 ---
 
