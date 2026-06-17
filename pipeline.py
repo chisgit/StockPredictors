@@ -10,6 +10,7 @@ from data_processor import preprocess_data
 from feature_engineering import add_technical_indicators, get_feature_columns
 from model import train_model
 import traceback
+from trace_utils import trace_event
 
 
 def _feature_value(frame, feature, ticker, fill_value=0.0):
@@ -35,6 +36,7 @@ def _prediction_scalar(prediction):
 
 def execute_pipeline(tickers):
     """Process each ticker independently with models trained specifically for that ticker"""
+    trace_event("pipeline.enter", tickers=tickers)
     # Initialize storage for predictions and trained models
     todays_close_predictions = []
     next_days_close_predictions = []
@@ -45,16 +47,23 @@ def execute_pipeline(tickers):
     
     for ticker in tickers:
         st.markdown(f"Processing {ticker}...")
-        print(f"\nProcessing {ticker}...\n")
+        trace_event("pipeline.ticker_start", ticker=ticker)
         
         try:
             # Get training data using NYSE timezone
             nyse_date = get_nyse_date()
+            trace_event("pipeline.before_fetch_data", ticker=ticker, nyse_date=str(nyse_date))
             stock_data = fetch_data(ticker, nyse_date + timedelta(days=2))
-            print(f"\n\nFetched stock data for {nyse_date + timedelta(days=1)} {ticker}:\n{stock_data.tail()}\n\n")  # Debugging line
+            trace_event(
+                "pipeline.after_fetch_data",
+                ticker=ticker,
+                empty=stock_data.empty,
+                rows=len(stock_data),
+                columns=list(stock_data.columns)[:8],
+            )
             
             if stock_data.empty:
-                print(f"\n\nNo data returned for {ticker}\n\n")
+                trace_event("pipeline.ticker_empty_data", ticker=ticker)
                 continue
             
             # Process base data (only cleans Prev Close NaNs)
@@ -82,6 +91,12 @@ def execute_pipeline(tickers):
             # Create training datasets by dropping NaNs only once
             train_ready_data_linear = processed_data.dropna().copy()
             train_ready_data_xgb = train_ready_data_xgb.dropna().copy()
+            trace_event(
+                "pipeline.training_data_ready",
+                ticker=ticker,
+                linear_rows=len(train_ready_data_linear),
+                xgb_rows=len(train_ready_data_xgb),
+            )
             
             # Train separate models for this specific ticker
             models[ticker] = {
@@ -132,6 +147,7 @@ def execute_pipeline(tickers):
             )
             
             try:
+                trace_event("pipeline.prediction_start", ticker=ticker)
                 # Make predictions using this ticker's specific models
                 linear_model_today = models[ticker]['linear_today']['model']
                 X_scaler_linear_today, y_scaler_linear_today = models[ticker]['linear_today']['scalers']
@@ -209,15 +225,31 @@ def execute_pipeline(tickers):
                 next_days_close_predictions.append((ticker, _prediction_scalar(xgb_prediction_next_day)))
                 
                 # Fix debugging output formatting
-                print(f"DEBUG XGBoost today's close for {ticker}: {_prediction_scalar(xgb_prediction_today):.2f}")
-                print(f"DEBUG Linear Regression next day close for {ticker}: {_prediction_scalar(linear_prediction_next):.2f}")
-                print(f"DEBUG XGBoost next day close for {ticker}: {_prediction_scalar(xgb_prediction_next_day):.2f}")
+                trace_event(
+                    "pipeline.prediction_finish",
+                    ticker=ticker,
+                    linear_today=_prediction_scalar(linear_prediction_today),
+                    linear_next=_prediction_scalar(linear_prediction_next),
+                    xgb_today=_prediction_scalar(xgb_prediction_today),
+                    xgb_next=_prediction_scalar(xgb_prediction_next_day),
+                )
                 
             except Exception as e:
-                print(f"Error making predictions for {ticker}: {str(e)}")
+                trace_event(
+                    "pipeline.prediction_exception",
+                    ticker=ticker,
+                    error_type=type(e).__name__,
+                    error=str(e),
+                )
                 continue
 
         except Exception as e:
+            trace_event(
+                "pipeline.ticker_exception",
+                ticker=ticker,
+                error_type=type(e).__name__,
+                error=str(e),
+            )
             print(f"\nError processing {ticker}:")
             print(f"Error type: {type(e).__name__}")
             print(f"Error message: {str(e)}")
@@ -230,8 +262,11 @@ def execute_pipeline(tickers):
             print(f"Last successful operation: {traceback.extract_tb(e.__traceback__)[-1].name}")
             
     # Log the final state of predictions
-    print(f"DEBUG: Predictions - Close Predictions: {todays_close_predictions}")
-    print(f"DEBUG: Predictions - Next Day Close Predictions: {next_days_close_predictions}")
+    trace_event(
+        "pipeline.exit",
+        close_predictions=todays_close_predictions,
+        next_day_predictions=next_days_close_predictions,
+    )
     return predictions
 
 def make_prediction(features, model, X_scaler, y_scaler):
