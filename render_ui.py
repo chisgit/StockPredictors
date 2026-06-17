@@ -258,6 +258,12 @@ def render_ui():
 
     if predict_button:
         # Set a flag in session state to indicate prediction is requested
+        print(
+            f"[PREDICT] button clicked. "
+            f"selected={st.session_state.get('selected_tickers', [])} "
+            f"tickers={st.session_state.get('tickers', [])} "
+            f"new_ticker={st.session_state.get('new_ticker', '')!r}"
+        )
         st.session_state.run_prediction = True
         # Trigger a rerun to allow the controller to execute the pipeline
         st.rerun()
