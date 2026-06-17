@@ -5,6 +5,7 @@ import os
 import threading
 from pathlib import Path
 import shutil
+from trace_utils import trace_event
 
 try:
     from yfinance import cache as yf_cache
@@ -44,13 +45,12 @@ def debug_yfinance_cache_location():
     Print the resolved cache path and current filesystem state for Render logs.
     """
     cache_dir = configure_yfinance_cache()
-    print(f"yfinance cache path: {cache_dir}")
-    print(f"yfinance cache exists: {cache_dir.exists()}")
+    trace_event("yfinance.cache_location", path=str(cache_dir), exists=cache_dir.exists())
     if cache_dir.exists():
         try:
-            print(f"yfinance cache entries: {[p.name for p in cache_dir.iterdir()]}")
+            trace_event("yfinance.cache_entries", entries=[p.name for p in cache_dir.iterdir()])
         except Exception as exc:
-            print(f"yfinance cache listing failed: {exc}")
+            trace_event("yfinance.cache_listing_failed", error=str(exc))
     return cache_dir
 
 
@@ -63,7 +63,7 @@ def clear_yfinance_cache():
         if cache_dir.exists():
             shutil.rmtree(cache_dir, ignore_errors=True)
         cache_dir.mkdir(parents=True, exist_ok=True)
-        print(f"Cleared yfinance cache: {cache_dir}")
+        trace_event("yfinance.cache_cleared", path=str(cache_dir))
 
 
 def _download_with_retry(ticker, start_date, end_date):
@@ -72,17 +72,42 @@ def _download_with_retry(ticker, start_date, end_date):
     """
     configure_yfinance_cache()
     try:
+        trace_event(
+            "yfinance.download.start",
+            ticker=ticker,
+            start_date=str(start_date),
+            end_date=str(end_date),
+        )
         df = yf.download(ticker, start=start_date, end=end_date)
+        trace_event(
+            "yfinance.download.finish",
+            ticker=ticker,
+            empty=getattr(df, "empty", None),
+            rows=len(df) if df is not None else None,
+        )
         if _should_refresh_after_download(ticker, df):
-            print(f"yfinance returned a retryable failure for {ticker}; clearing cache and retrying once")
+            trace_event("yfinance.download.retryable_failure", ticker=ticker)
             clear_yfinance_cache()
+            trace_event("yfinance.download.retry_start", ticker=ticker)
             df = yf.download(ticker, start=start_date, end=end_date)
+            trace_event(
+                "yfinance.download.retry_finish",
+                ticker=ticker,
+                empty=getattr(df, "empty", None),
+                rows=len(df) if df is not None else None,
+            )
         return df
     except Exception as exc:
         message = str(exc).lower()
+        trace_event(
+            "yfinance.download.exception",
+            ticker=ticker,
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
         if os.environ.get("YFINANCE_TEST_CACHE_REFRESH", "").lower() in ("1", "true", "yes"):
             if _YF_TEST_CACHE_REFRESH_MESSAGE in message:
-                print(f"yfinance test cache refresh trigger for {ticker}: {exc}")
+                trace_event("yfinance.test_cache_refresh", ticker=ticker, error=str(exc))
                 clear_yfinance_cache()
                 return yf.download(ticker, start=start_date, end=end_date)
 
@@ -96,7 +121,7 @@ def _download_with_retry(ticker, start_date, end_date):
             "malformed",
         )
         if any(signal in message for signal in cache_error_signals) or "operationalerror" in type(exc).__name__.lower():
-            print(f"yfinance cache error for {ticker}: {exc}")
+            trace_event("yfinance.cache_error", ticker=ticker, error=str(exc))
             clear_yfinance_cache()
             return yf.download(ticker, start=start_date, end=end_date)
         raise
@@ -118,7 +143,15 @@ def _should_refresh_after_download(ticker, df):
     if hasattr(yf_shared, "_ERRORS"):
         error_text = str(yf_shared._ERRORS.get(ticker_key, "")).lower()
 
-    return any(marker in error_text for marker in _YF_RETRY_ERROR_MARKERS)
+    should_refresh = any(marker in error_text for marker in _YF_RETRY_ERROR_MARKERS)
+    if error_text:
+        trace_event(
+            "yfinance.shared_error",
+            ticker=ticker_key,
+            should_refresh=should_refresh,
+            error=error_text,
+        )
+    return should_refresh
 
 
 def invalidate_yfinance_cache():
@@ -162,10 +195,17 @@ def fetch_data(ticker, end_date, start_date="2008-01-01", use_local_data=False):
     local_file = f"{ticker}_data.csv"
 
     if use_local_data and os.path.exists(local_file):
+        trace_event("fetch_data.local_file", ticker=ticker, path=local_file)
         df = custom_read_csv(local_file)
         print(f"Loaded data from local file: {local_file}")
     else:
         # Fetch data from yfinance
+        trace_event(
+            "fetch_data.remote_start",
+            ticker=ticker,
+            start_date=str(start_date),
+            end_date=str(end_date),
+        )
         df = _download_with_retry(ticker, start_date, end_date)
         
         # Create MultiIndex columns if not already present
@@ -181,8 +221,9 @@ def fetch_data(ticker, end_date, start_date="2008-01-01", use_local_data=False):
             df_to_save = df.copy()
             df_to_save.index.name = 'Date'
             df_to_save.to_csv(local_file)
-            print(f"Fetched data from yfinance and saved to: {local_file}")
+            trace_event("fetch_data.remote_saved", ticker=ticker, path=local_file, rows=len(df))
         else:
+            trace_event("fetch_data.remote_empty", ticker=ticker)
             raise ValueError(f"No data retrieved for ticker {ticker} from yfinance")
 
     return df

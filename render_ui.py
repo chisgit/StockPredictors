@@ -15,6 +15,7 @@ from rules import UI_RULES
 from display_market_status import display_market_status, generate_next_day_header
 from utils import market_status, next_trading_day
 from data_handler import debug_yfinance_cache_location, invalidate_yfinance_cache
+from trace_utils import trace_event
 
 
 def enforce_max_tickers():
@@ -54,7 +55,7 @@ def display_results(predictions, skipped_tickers=None):
         todays_close_predictions, next_day_close_predictions
     )
     ticker_data = {}  # Cache for storing downloaded data per ticker
-    
+
     # Display skipped tickers with messages
     for ticker, reason in skipped_tickers:
         with render_section_container(f"ticker_section_{ticker}_skipped", "dark"):
@@ -182,6 +183,13 @@ def update_selected_tickers(change):
 
 
 def render_ui():
+    trace_event(
+        "render_ui.enter",
+        selected=st.session_state.get("selected_tickers"),
+        tickers=st.session_state.get("tickers"),
+        new_ticker=st.session_state.get("new_ticker"),
+        run_prediction=st.session_state.get("run_prediction"),
+    )
     st.title("Stock Price Predictor")
 
     with st.expander("Cache Debug", expanded=False):
@@ -192,8 +200,10 @@ def render_ui():
             st.code(str(cache_dir))
 
         if st.button("Clear yfinance cache now", key="clear_yf_cache_now"):
+            trace_event("render_ui.cache_clear_clicked")
             invalidate_yfinance_cache()
             st.success("yfinance cache cleared. The next request will rebuild it.")
+            trace_event("render_ui.rerun", reason="cache_clear")
             st.rerun()
 
     # Initialize default tickers if not already in session state
@@ -219,6 +229,20 @@ def render_ui():
         if not isinstance(current_widget_value, list) or any(
             item not in valid_tickers for item in current_widget_value
         ):
+            trace_event(
+                "render_ui.delete_invalid_widget_state",
+                widget_key=widget_key,
+                value=current_widget_value,
+                valid_tickers=valid_tickers,
+            )
+            del st.session_state[widget_key]
+        elif list(current_widget_value) != selected_tickers:
+            trace_event(
+                "render_ui.delete_stale_widget_state",
+                widget_key=widget_key,
+                widget_value=current_widget_value,
+                selected_tickers=selected_tickers,
+            )
             del st.session_state[widget_key]
 
     # Add warning if max tickers limit is reached
@@ -237,6 +261,7 @@ def render_ui():
 
     # Update selected tickers based on multiselect
     st.session_state.selected_tickers = tickers
+    trace_event("render_ui.after_multiselect", selected=tickers)
 
     # Search bar for new tickers
     new_ticker = st.text_input(
@@ -248,10 +273,19 @@ def render_ui():
     # This clears out the ticker if there's a change in removing the ticker
     # this way it doesn't keep appearing in the search bar after it's been removed
     if new_ticker != st.session_state.new_ticker:
+        trace_event(
+            "render_ui.new_ticker_changed",
+            previous=st.session_state.new_ticker,
+            current=new_ticker,
+        )
         st.session_state.new_ticker = new_ticker
 
     if new_ticker:
+        trace_event("render_ui.before_search_and_add", new_ticker=new_ticker)
         search_and_add_ticker(new_ticker)
+        trace_event("render_ui.after_search_and_add", new_ticker=new_ticker)
+    if st.session_state.new_ticker:
+        trace_event("render_ui.clear_new_ticker", value=st.session_state.new_ticker)
     st.session_state.new_ticker = ""
 
     # Create two distinct containers
@@ -267,6 +301,19 @@ def render_ui():
 
     if predict_button:
         # Set a flag in session state to indicate prediction is requested
+        trace_event(
+            "render_ui.predict_clicked",
+            selected=st.session_state.get("selected_tickers", []),
+            tickers=st.session_state.get("tickers", []),
+            new_ticker=st.session_state.get("new_ticker", ""),
+        )
         st.session_state.run_prediction = True
         # Trigger a rerun to allow the controller to execute the pipeline
+        trace_event("render_ui.rerun", reason="predict_clicked")
         st.rerun()
+    trace_event(
+        "render_ui.exit",
+        selected=st.session_state.get("selected_tickers"),
+        new_ticker=st.session_state.get("new_ticker"),
+        run_prediction=st.session_state.get("run_prediction"),
+    )

@@ -2,6 +2,7 @@ import yfinance as yf
 import streamlit as st
 import streamlit.components.v1 as components
 from utils import market_status
+from trace_utils import trace_event
 
 
 THEME = {
@@ -402,25 +403,58 @@ def search_and_add_ticker(new_ticker):
     # This way it doesn't keep appearing in the search bar after it's been removed
     if new_ticker != st.session_state.new_ticker:
         st.session_state.new_ticker = new_ticker
+        trace_event("search.state_updated", new_ticker=new_ticker)
 
     if new_ticker:
         try:
-            stock_data = get_recent_data(new_ticker)
+            new_ticker_upper = new_ticker.strip().upper()
+            if not new_ticker_upper:
+                trace_event("search.invalid_or_empty", new_ticker=new_ticker)
+                return
+
+            if st.session_state.get("last_processed_ticker_search") == new_ticker_upper:
+                trace_event("search.skip_already_processed", ticker=new_ticker_upper)
+                return
+
+            trace_event(
+                "search.enter",
+                new_ticker=new_ticker,
+                selected=st.session_state.get("selected_tickers", []),
+                tickers=st.session_state.get("tickers", []),
+            )
+            stock_data = get_recent_data(new_ticker_upper)
             if stock_data is None or stock_data.empty:
+                trace_event("search.invalid_or_empty", new_ticker=new_ticker)
+                st.session_state.last_processed_ticker_search = new_ticker_upper
                 st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
             else:
-                new_ticker_upper = new_ticker.upper()
+                st.session_state.last_processed_ticker_search = new_ticker_upper
                 if new_ticker_upper not in [
                     t.upper() for t in st.session_state.tickers
                 ]:
+                    trace_event("search.add_new_ticker", ticker=new_ticker_upper)
                     st.session_state.tickers.insert(0, new_ticker_upper)
                     st.session_state.selected_tickers.append(new_ticker_upper)
-                    st.rerun()
+                    trace_event(
+                        "search.state_mutated",
+                        reason="added_new_ticker",
+                        selected=st.session_state.selected_tickers,
+                        tickers=st.session_state.tickers,
+                    )
                 else:
                     if new_ticker_upper not in [
                         t.upper() for t in st.session_state.selected_tickers
                     ]:
+                        trace_event("search.select_existing_ticker", ticker=new_ticker_upper)
                         st.session_state.selected_tickers.append(new_ticker_upper)
-                        st.rerun()
+                        trace_event(
+                            "search.state_mutated",
+                            reason="selected_existing_ticker",
+                            selected=st.session_state.selected_tickers,
+                            tickers=st.session_state.tickers,
+                        )
+                    else:
+                        trace_event("search.already_selected", ticker=new_ticker_upper)
         except Exception as e:
+            trace_event("search.exception", new_ticker=new_ticker, error=str(e))
             st.error(f"Error: {e}")
