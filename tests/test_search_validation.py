@@ -47,10 +47,21 @@ def test_validate_ticker_reports_provider_down_from_exception(monkeypatch):
     assert render_helpers.validate_ticker_with_yfinance("TSLA") == (False, True)
 
 
+def test_validate_ticker_reports_provider_down_from_yfinance_rate_limit_exception(monkeypatch):
+    YFRateLimitError = type("YFRateLimitError", (Exception,), {})
+
+    def fake_download(*args, **kwargs):
+        raise YFRateLimitError("Too Many Requests")
+
+    monkeypatch.setattr(render_helpers.yf, "download", fake_download)
+
+    assert render_helpers.validate_ticker_with_yfinance("TSLA") == (False, True)
+
+
 def test_provider_down_message_text_is_stable():
     assert (
         render_helpers.YFINANCE_PROVIDER_DOWN_MESSAGE
-        == "yfinance data provider is down, please try later"
+        == "Data Provider yfinance is currently down. Please try again later."
     )
 
 

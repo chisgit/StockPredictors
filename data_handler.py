@@ -18,12 +18,13 @@ _YF_RETRY_ERROR_MARKERS = (
     "try after a while",
     "failed download",
     "yfr",
+    "yfratelimiterror",
     "runtimeerror",
     "rate limit",
     "rate-limit",
     "too many requests",
 )
-YFINANCE_PROVIDER_DOWN_MESSAGE = "yfinance data provider is down, please try later"
+YFINANCE_PROVIDER_DOWN_MESSAGE = "Data Provider yfinance is currently down. Please try again later."
 
 
 def _default_yfinance_cache_dir():
