@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from datetime import date
 from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit
 from sklearn.linear_model import LinearRegression
@@ -32,7 +31,8 @@ def train_model(
     ticker_level = 1
     current_ticker = train_ready_data.columns[0][ticker_level]
 
-    model_path = _MODELS_DIR / f"{current_ticker}_{date.today()}_{model_type}_{target}.pkl"
+    last_data_date = train_ready_data.index[-1].strftime("%Y-%m-%d")
+    model_path = _MODELS_DIR / f"{current_ticker}_{last_data_date}_{model_type}_{target}.pkl"
     if model_path.exists():
         model, scalers = joblib.load(model_path)
         print(f"Loaded cached model: {model_path.name}")
