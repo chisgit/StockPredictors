@@ -444,6 +444,7 @@ def search_and_add_ticker(new_ticker):
             if not already_selected:
                 trace_event("search.select_ticker", ticker=new_ticker_upper)
                 st.session_state.selected_tickers.append(new_ticker_upper)
+                st.session_state.pending_autoselect_ticker = new_ticker_upper
                 trace_event(
                     "search.state_mutated",
                     reason="selected_ticker",
