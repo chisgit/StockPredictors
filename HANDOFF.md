@@ -3,8 +3,8 @@
 ## Workspace
 - Path: `c:\Users\User\StockPredictors`
 - Date: 2026-06-17
-- Branch: `main` @ `ad54c28` — clean, pushed
-- No active worktrees
+- Branch: `main` @ `65da3ce` — clean, pushed
+- Secondary worktree: `C:\Users\User\StockPredictors-market-status` on `investigate-market-status`
 
 ---
 
