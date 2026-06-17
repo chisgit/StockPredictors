@@ -50,7 +50,14 @@ def main():
         tickers = st.session_state.selected_tickers
         trace_event("main.before_execute_pipeline", tickers=tickers)
 
-        predictions, skipped_tickers = execute_pipeline(tickers)
+        # Execute pipeline with per-ticker loading status
+        with st.status("Running predictions...", expanded=True) as status:
+            predictions, skipped_tickers = execute_pipeline(tickers)
+            status.update(
+                label=f"Predictions ready for {', '.join(tickers)}",
+                state="complete",
+                expanded=False,
+            )
         trace_event(
             "main.after_execute_pipeline",
             close_count=len(predictions[0]) if predictions else None,
