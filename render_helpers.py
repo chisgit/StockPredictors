@@ -407,18 +407,28 @@ def search_and_add_ticker(new_ticker):
 
     if new_ticker:
         try:
+            new_ticker_upper = new_ticker.strip().upper()
+            if not new_ticker_upper:
+                trace_event("search.invalid_or_empty", new_ticker=new_ticker)
+                return
+
+            if st.session_state.get("last_processed_ticker_search") == new_ticker_upper:
+                trace_event("search.skip_already_processed", ticker=new_ticker_upper)
+                return
+
             trace_event(
                 "search.enter",
                 new_ticker=new_ticker,
                 selected=st.session_state.get("selected_tickers", []),
                 tickers=st.session_state.get("tickers", []),
             )
-            stock_data = get_recent_data(new_ticker)
+            stock_data = get_recent_data(new_ticker_upper)
             if stock_data is None or stock_data.empty:
                 trace_event("search.invalid_or_empty", new_ticker=new_ticker)
+                st.session_state.last_processed_ticker_search = new_ticker_upper
                 st.warning(f"Ticker '{new_ticker}' is not valid or does not exist.")
             else:
-                new_ticker_upper = new_ticker.upper()
+                st.session_state.last_processed_ticker_search = new_ticker_upper
                 if new_ticker_upper not in [
                     t.upper() for t in st.session_state.tickers
                 ]:
@@ -426,12 +436,11 @@ def search_and_add_ticker(new_ticker):
                     st.session_state.tickers.insert(0, new_ticker_upper)
                     st.session_state.selected_tickers.append(new_ticker_upper)
                     trace_event(
-                        "search.rerun",
+                        "search.state_mutated",
                         reason="added_new_ticker",
                         selected=st.session_state.selected_tickers,
                         tickers=st.session_state.tickers,
                     )
-                    st.rerun()
                 else:
                     if new_ticker_upper not in [
                         t.upper() for t in st.session_state.selected_tickers
@@ -439,12 +448,11 @@ def search_and_add_ticker(new_ticker):
                         trace_event("search.select_existing_ticker", ticker=new_ticker_upper)
                         st.session_state.selected_tickers.append(new_ticker_upper)
                         trace_event(
-                            "search.rerun",
+                            "search.state_mutated",
                             reason="selected_existing_ticker",
                             selected=st.session_state.selected_tickers,
                             tickers=st.session_state.tickers,
                         )
-                        st.rerun()
                     else:
                         trace_event("search.already_selected", ticker=new_ticker_upper)
         except Exception as e:
