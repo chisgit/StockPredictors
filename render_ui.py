@@ -258,7 +258,7 @@ def render_ui():
         st.warning(f"Maximum {UI_RULES['max_tickers']} tickers can be selected")
 
     tickers = st.multiselect(
-        "Choose stocks to predict (click away to apply):",
+        "Choose multiple stocks to predict...",
         valid_tickers,
         default=selected_tickers,
         key=widget_key,
