@@ -1,6 +1,6 @@
 # Stock Predictor — UI/UX Improvement Plan
 
-Status: In progress · Owner: clpatel · Started: 2026-06-13
+Status: Complete · Owner: clpatel · Started: 2026-06-13 · All visual §§ done · search flow verified in production
 
 This plan addresses the visual and structural issues in the prediction results
 view. Items are ordered by dependency: the market-status foundation must land
@@ -21,11 +21,12 @@ first because every header and stats decision branches off it.
 | §4+§5 | Close-card number color + bold deltas | `feat/close-color-deltas` | ✅ merged (PR #18) |
 | §1f-δ-lowered | Move Δ label below price diff in card | `feat/delta-lowered` | ✅ done (other agent) |
 | §6 | Strip chart chrome | `feat/chart-chrome` | ✅ merged (PR #14) |
-| §7 | Dark theme + light toggle | `feat/dark-theme-toggle` | 🔄 in progress → see [DARK_MODE_PLAN.md](DARK_MODE_PLAN.md) (DM1–DM2 remain) |
+| §7 | Dark theme + light toggle + DM1–DM6 polish | `feat/dark-theme-toggle` + `feat/dark-mode-polish` | ✅ all done · plan archived (`aa61185`) |
 | — | Search: auto-select + clear bar + loading status + UX tweaks | `feat/search-autoselect` | ✅ merged (PR #22, `b731a9b`) |
-| — | Search: iterative edge-case fixes (guard, spinner, validation, flash) | direct to main | ✅ merged (`b45e817`–`0482643`) |
+| — | Search: iterative edge-case fixes (guard, spinner, validation, flash, yfinance-independent selection) | direct to main | ✅ merged (`b45e817`–`ad54c28`) |
 | — | Card spacing uniformity — today + next-day sections | `feat/card-spacing` | ✅ merged (PR #23, `7afe50b`) |
 | — | Market status titles simplified | direct to main | ✅ merged (`89227ef`) |
+| §bug-1 | Search/autoselect production regression | direct to main | ✅ fixed + production verified (`ad54c28`) |
 
 **Workflow per section:** branch off fresh `main` → implement → add/extend
 isolated tests under `tests/` → `pytest -q` green → push → PR → merge →

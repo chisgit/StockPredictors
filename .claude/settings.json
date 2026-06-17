@@ -18,7 +18,17 @@
       "PowerShell(python -m playwright --version 2>&1)",
       "PowerShell(python -m playwright install chromium 2>&1)",
       "PowerShell(\\(Invoke-WebRequest -Uri \"http://localhost:8503\" -TimeoutSec 3 -UseBasicParsing\\).StatusCode)",
-      "PowerShell(netstat -ano | findstr \":8503\" | ForEach-Object { \\($_ -split '\\\\s+'\\)[-1] } | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Host \"8503 killed\")"
+      "PowerShell(netstat -ano | findstr \":8503\" | ForEach-Object { \\($_ -split '\\\\s+'\\)[-1] } | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Host \"8503 killed\")",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" push -u origin feat/dm1-dm2-polish 2>&1)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" worktree prune 2>&1)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" branch -d feat/dm1-dm2-polish 2>&1)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" worktree add \"C:\\\\Users\\\\User\\\\SP-dm1-dm2\" -b feat/dm1-dm2-polish main 2>&1)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" worktree remove \"C:\\\\Users\\\\User\\\\SP-dm1-dm2\" --force 2>&1)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" pull origin main 2>&1)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" stash)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" pull origin main)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" stash pop)",
+      "PowerShell(git -C \"C:\\\\Users\\\\User\\\\StockPredictors\" log --oneline -5)"
     ]
   }
 }
