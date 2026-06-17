@@ -263,15 +263,16 @@ def render_ui():
     st.session_state.selected_tickers = tickers
     trace_event("render_ui.after_multiselect", selected=tickers)
 
-    # Search bar for new tickers
+    # Search bar — keyed by counter so incrementing counter creates a fresh widget (clears input).
+    # Streamlit cannot reset a widget's value mid-run via session_state assignment or key deletion;
+    # changing the key is the only reliable approach.
+    search_key = f"new_ticker_input_{st.session_state.search_input_counter}"
     new_ticker = st.text_input(
         "Search for a stock ticker:",
-        value=st.session_state.new_ticker,
-        key="new_ticker_input",
+        value="",
+        key=search_key,
     )
 
-    # This clears out the ticker if there's a change in removing the ticker
-    # this way it doesn't keep appearing in the search bar after it's been removed
     if new_ticker != st.session_state.new_ticker:
         trace_event(
             "render_ui.new_ticker_changed",
@@ -285,16 +286,13 @@ def render_ui():
         search_result = search_and_add_ticker(new_ticker)
         trace_event("render_ui.after_search_and_add", new_ticker=new_ticker, result=str(search_result))
         if search_result is True:
-            # Ticker added/selected: delete widget key so text_input re-renders empty, then rerun
-            # so multiselect picks up updated selected_tickers on the fresh render cycle.
-            if "new_ticker_input" in st.session_state:
-                del st.session_state["new_ticker_input"]
+            # Increment counter → next render gets a new key → fresh empty widget.
+            st.session_state.search_input_counter += 1
             st.session_state.new_ticker = ""
             st.rerun()
         elif search_result is None:
-            # Guard fired (already processed): clear bar without forcing a rerun
-            if "new_ticker_input" in st.session_state:
-                del st.session_state["new_ticker_input"]
+            # Guard fired: clear bar without forcing a rerun
+            st.session_state.search_input_counter += 1
             st.session_state.new_ticker = ""
         # search_result is False (invalid ticker): leave bar so user sees the warning
     if st.session_state.new_ticker:
