@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Skill(run:*)",
+      "PowerShell(Start-Process -FilePath \"C:\\\\Users\\\\User\\\\StockPredictors\\\\venv\\\\Scripts\\\\streamlit.exe\" -ArgumentList \"run\",\"stock_predictors.py\",\"--server.port\",\"8501\" -WorkingDirectory \"C:\\\\Users\\\\User\\\\StockPredictors\" -WindowStyle Normal)",
+      "PowerShell(Get-Process streamlit -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)"
+    ]
+  }
+}

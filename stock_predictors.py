@@ -55,23 +55,26 @@ def main():
         trace_event("main.before_execute_pipeline", tickers=tickers)
 
         # Execute pipeline
-        predictions = execute_pipeline(tickers)
+        predictions, skipped_tickers = execute_pipeline(tickers)
         trace_event(
             "main.after_execute_pipeline",
             close_count=len(predictions[0]) if predictions else None,
             next_count=len(predictions[1]) if predictions else None,
+            skipped_count=len(skipped_tickers),
         )
 
-        # Cache predictions
+        # Cache predictions and skipped tickers
         st.session_state.last_predictions = predictions
+        st.session_state.last_skipped_tickers = skipped_tickers
 
         # Display results
         trace_event("main.before_display_results", source="fresh_prediction")
-        display_results(predictions)
+        display_results(predictions, skipped_tickers)
     elif st.session_state.get('last_predictions') is not None:
         # Re-render cached predictions
+        skipped_tickers = st.session_state.get('last_skipped_tickers', [])
         trace_event("main.before_display_results", source="cached_prediction")
-        display_results(st.session_state.last_predictions)
+        display_results(st.session_state.last_predictions, skipped_tickers)
     else:
         trace_event("main.idle", pass_no=st.session_state.trace_pass)
 

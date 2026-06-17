@@ -14,6 +14,9 @@ from trace_utils import trace_event
 
 
 def _feature_value(frame, feature, ticker, fill_value=0.0):
+    """
+    Read a single feature value from a one-row frame and normalize missing / array-like values.
+    """
     try:
         value = frame[(feature, ticker)].iloc[0]
     except Exception:
@@ -32,6 +35,9 @@ def _feature_value(frame, feature, ticker, fill_value=0.0):
 
 
 def _prediction_scalar(prediction):
+    """
+    Convert model outputs like shape (1, 1) or (1,) into a plain Python float.
+    """
     return float(np.asarray(prediction).squeeze().item())
 
 def execute_pipeline(tickers):
@@ -41,14 +47,15 @@ def execute_pipeline(tickers):
     todays_close_predictions = []
     next_days_close_predictions = []
     predictions = [todays_close_predictions, next_days_close_predictions]
-    
+
     # Store models for each ticker
     models = {}
-    
+    skipped_tickers = []  # Track tickers that couldn't be processed
+
     for ticker in tickers:
         st.markdown(f"Processing {ticker}...")
         trace_event("pipeline.ticker_start", ticker=ticker)
-        
+
         try:
             # Get training data using NYSE timezone
             nyse_date = get_nyse_date()
@@ -61,9 +68,11 @@ def execute_pipeline(tickers):
                 rows=len(stock_data),
                 columns=list(stock_data.columns)[:8],
             )
-            
+
             if stock_data.empty:
                 trace_event("pipeline.ticker_empty_data", ticker=ticker)
+                print(f"\n\nNo data returned for {ticker}\n\n")
+                skipped_tickers.append((ticker, "No data returned"))
                 continue
             
             # Process base data (only cleans Prev Close NaNs)
@@ -88,6 +97,7 @@ def execute_pipeline(tickers):
             last_row_basic = processed_data.iloc[-1:].copy()
             last_row_with_tech = train_ready_data_xgb.iloc[-1:].copy()
             
+            # Create training_error_msg = None
             # Create training datasets by dropping NaNs only once
             train_ready_data_linear = processed_data.dropna().copy()
             train_ready_data_xgb = train_ready_data_xgb.dropna().copy()
@@ -98,6 +108,14 @@ def execute_pipeline(tickers):
                 xgb_rows=len(train_ready_data_xgb),
             )
             
+            # Check if we have enough data to train (need at least 2 samples for train/test split)
+            min_samples = 2
+            if len(train_ready_data_linear) < min_samples or len(train_ready_data_xgb) < min_samples:
+                _error_msg = f"Insufficient data: linear={len(train_ready_data_linear)}, xgb={len(train_ready_data_xgb)} samples"
+                print(f"\nInsufficient data for {ticker}: {_error_msg}. Skipping.")
+                skipped_tickers.append((ticker, _error_msg))
+                continue
+
             # Train separate models for this specific ticker
             models[ticker] = {
                 'linear_today': {
@@ -266,8 +284,13 @@ def execute_pipeline(tickers):
         "pipeline.exit",
         close_predictions=todays_close_predictions,
         next_day_predictions=next_days_close_predictions,
+        skipped_tickers=skipped_tickers,
     )
-    return predictions
+    print(f"DEBUG: Predictions - Close Predictions: {todays_close_predictions}")
+    print(f"DEBUG: Predictions - Next Day Close Predictions: {next_days_close_predictions}")
+    if skipped_tickers:
+        print(f"DEBUG: Skipped tickers: {skipped_tickers}")
+    return predictions, skipped_tickers
 
 def make_prediction(features, model, X_scaler, y_scaler):
     """Helper function to make predictions using a model"""

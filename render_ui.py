@@ -32,13 +32,14 @@ def _delta_caption(is_open):
     return "Δ from last traded" if is_open else "Δ from close"
 
 
-def display_results(predictions):
+def display_results(predictions, skipped_tickers=None):
     """Display latest market data and predictions for each ticker."""
     enforce_max_tickers()
 
     last_available_date = None
     todays_close_predictions = predictions[0]
     next_day_close_predictions = predictions[1]
+    skipped_tickers = skipped_tickers or []
 
     # Resolve market status once — drives main-section framing.
     # MARKET_OPEN: Δ = gap from live price (forward view).
@@ -46,12 +47,20 @@ def display_results(predictions):
     status = market_status()
 
     print(f"Today's Close and Next_Day Predictions: {predictions}")
+    if skipped_tickers:
+        print(f"Skipped tickers: {skipped_tickers}")
 
     # Group predictions by ticker while preserving order
     grouped_predictions, grouped_next_day_predictions = group_predictions_by_ticker(
         todays_close_predictions, next_day_close_predictions
     )
     ticker_data = {}  # Cache for storing downloaded data per ticker
+
+    # Display skipped tickers with messages
+    for ticker, reason in skipped_tickers:
+        with render_section_container(f"ticker_section_{ticker}_skipped", "dark"):
+            st.markdown(ticker_header_html(ticker, "dark"), unsafe_allow_html=True)
+            st.warning(f"⚠️ Insufficient historical data for {ticker} — need more trading days to generate predictions")
 
     for ticker, predictions in grouped_predictions.items():
         try:
