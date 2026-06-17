@@ -85,7 +85,7 @@ def test_unknown_status_raises():
 def test_next_day_header_is_forward_no_displaying_cue():
     # forward section never uses the "Displaying" past-session cue
     html = generate_next_day_header("Monday, June 15")
-    assert html == "Predictions for Monday, June 15"
+    assert html == "Next Trading Day's Close Predictions Monday, June 15"
     assert "Displaying" not in html
 
 

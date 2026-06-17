@@ -64,7 +64,7 @@ def generate_next_day_header(next_date_str):
     is the concrete next trading session (utils.next_trading_day of the last
     completed session) — before the bell this is today.
     """
-    return f"Predictions for {next_date_str}"
+    return f"Next Trading Day's Close Predictions {next_date_str}"
 
 
 def display_market_status(last_available_date):
