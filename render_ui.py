@@ -211,17 +211,13 @@ def render_ui():
         st.session_state.tickers = UI_RULES["default_tickers"]
 
     if "selected_tickers" not in st.session_state:
-        st.session_state.selected_tickers = UI_RULES["default_tickers"].copy()
+        st.session_state.selected_tickers = []
 
     valid_tickers = list(st.session_state.tickers)
     selected_tickers = [
         ticker for ticker in st.session_state.selected_tickers if ticker in valid_tickers
     ]
-    if not selected_tickers:
-        selected_tickers = UI_RULES["default_tickers"].copy()
-        st.session_state.selected_tickers = selected_tickers
-    else:
-        st.session_state.selected_tickers = selected_tickers
+    st.session_state.selected_tickers = selected_tickers
 
     widget_key = "stock_multiselect"
     if widget_key in st.session_state:
@@ -257,6 +253,7 @@ def render_ui():
         on_change=update_selected_tickers,
         args=[widget_key],
         max_selections=UI_RULES["max_tickers"],
+        placeholder="Choose from the list or search below (e.g. TSLA, AAPL, GOOGL...)",
     )
 
     # Update selected tickers based on multiselect

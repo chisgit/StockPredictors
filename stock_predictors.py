@@ -1,5 +1,4 @@
 import streamlit as st
-import time as time_module
 from render_ui import render_ui, display_results
 from pipeline import execute_pipeline
 from session_state import initialize_session_state
@@ -47,15 +46,18 @@ def main():
             results_key=st.session_state.results_key,
         )
 
-        # Wait for 2 seconds
-        time_module.sleep(2)
-
         # Get selected tickers
         tickers = st.session_state.selected_tickers
         trace_event("main.before_execute_pipeline", tickers=tickers)
 
-        # Execute pipeline
-        predictions, skipped_tickers = execute_pipeline(tickers)
+        # Execute pipeline with per-ticker loading status
+        with st.status("Running predictions...", expanded=True) as status:
+            predictions, skipped_tickers = execute_pipeline(tickers)
+            status.update(
+                label=f"Predictions ready for {', '.join(tickers)}",
+                state="complete",
+                expanded=False,
+            )
         trace_event(
             "main.after_execute_pipeline",
             close_count=len(predictions[0]) if predictions else None,
