@@ -21,9 +21,10 @@
 - 30 s threshold applies on Predict click only, not background polling
 
 ### Model cache — `train_model()` at [model.py:10](model.py#L10)
-- After train: save model + scalers to `models/{ticker}_{date}_{model_type}.pkl` via joblib
-- On Predict: if same-calendar-day file exists → load, skip retrain
-- One retrain per ticker per calendar day max
+- After train: save model + scalers to `models/{ticker}_{last_data_date}_{model_type}_{target}.pkl` via joblib
+- Cache key = last row date of training data (not calendar date)
+- On Predict: pkl for current last-data-date exists → load, skip retrain
+- Retrain only when CSV gains new trading closes
 
 ### Ticker known-list — `known_tickers.json`
 - After successful data fetch: record ticker in `known_tickers.json`
