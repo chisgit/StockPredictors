@@ -429,7 +429,8 @@ def search_and_add_ticker(new_ticker):
                 tickers=st.session_state.get("tickers", []),
             )
 
-            stock_data = get_recent_data(new_ticker_upper)
+            with st.spinner(f"Validating {new_ticker_upper}..."):
+                stock_data = get_recent_data(new_ticker_upper)
             if stock_data is None or stock_data.empty:
                 trace_event("search.invalid_or_empty", new_ticker=new_ticker_upper)
                 st.session_state.last_processed_ticker_search = new_ticker_upper
