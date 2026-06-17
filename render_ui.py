@@ -280,6 +280,14 @@ def render_ui():
     st.session_state.selected_tickers = tickers
     trace_event("render_ui.after_multiselect", selected=tickers)
 
+    # Clear pending autoselect guard once the ticker is confirmed in the widget.
+    # The guard in update_selected_tickers only needs to block the one stale
+    # callback that can fire right after widget recreation — leaving it set beyond
+    # that first rerun causes legitimate deselects to be ignored.
+    pending = st.session_state.get("pending_autoselect_ticker")
+    if pending and pending.upper() in [t.upper() for t in tickers]:
+        st.session_state.pending_autoselect_ticker = None
+
     # Search bar — keyed by counter so incrementing counter creates a fresh widget (clears input).
     # Streamlit cannot reset a widget's value mid-run via session_state assignment or key deletion;
     # changing the key is the only reliable approach.

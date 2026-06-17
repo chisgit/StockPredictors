@@ -418,9 +418,11 @@ def search_and_add_ticker(new_ticker):
             already_selected = new_ticker_upper in [
                 t.upper() for t in st.session_state.selected_tickers
             ]
-            if st.session_state.get("last_processed_ticker_search") == new_ticker_upper and already_selected:
-                trace_event("search.skip_already_processed", ticker=new_ticker_upper)
-                return None
+            if already_selected:
+                trace_event("search.already_selected_early", ticker=new_ticker_upper)
+                st.info(f"{new_ticker_upper} is already selected.")
+                st.session_state.last_processed_ticker_search = new_ticker_upper
+                return True
 
             trace_event(
                 "search.enter",
