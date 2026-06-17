@@ -7,7 +7,7 @@ Streamlit / no time dependence, so it is deterministic.
 
 State -> header copy:
   BEFORE_MARKET_OPEN          -> "Market is Closed" + date subtitle
-  MARKET_OPEN                 -> "Market is Open" + "Live - Last Traded" subtitle
+  MARKET_OPEN                 -> "Market is Open" + "Displaying Predictions for Today's Close" subtitle
   AFTER_MARKET_CLOSE, trading -> "Market is Closed" + finality subtitle
   AFTER_MARKET_CLOSE, off-day -> "Market is Closed (Weekend/Holiday)" + date subtitle
 """
@@ -35,7 +35,7 @@ def test_market_open_live_subtitle_no_date():
     html = generate_market_status_header("MARKET_OPEN", DATE)
     assert "🔔" in html
     assert "Market is Open" in html
-    assert "Live — Last Traded" in html
+    assert "Displaying Predictions for Today's Close" in html
     assert DATE not in html
 
 

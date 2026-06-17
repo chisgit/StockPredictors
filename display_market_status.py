@@ -13,7 +13,7 @@ def generate_market_status_header(status, last_date_str, today_is_trading_day=Tr
       - BEFORE_MARKET_OPEN (trading day, pre-bell):
             "Market is Closed" / "Displaying Predictions for <last traded date>"
       - MARKET_OPEN:
-            "Market is Open" / "Live — Last Traded"
+            "Market is Open" / "Displaying Predictions for Today's Close"
       - AFTER_MARKET_CLOSE on a trading day (today's close is final):
             "Market is Closed" / "Today's Close Predictions and Actuals"
       - AFTER_MARKET_CLOSE on a weekend/holiday (today never traded):
@@ -27,7 +27,7 @@ def generate_market_status_header(status, last_date_str, today_is_trading_day=Tr
     subtitle = ""
     if status == "MARKET_OPEN":
         icon, title = "🔔", "Market is Open"
-        subtitle = "Live — Last Traded"
+        subtitle = "Displaying Predictions for Today's Close"
     elif status == "BEFORE_MARKET_OPEN":
         icon, title = "🔴", "Market is Closed"
         subtitle = f"Displaying Predictions for {last_date_str}"
