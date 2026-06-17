@@ -1,10 +1,15 @@
 import numpy as np
 import pandas as pd
+from datetime import date
+from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
+import joblib
 from feature_engineering import get_feature_columns
+
+_MODELS_DIR = Path("models")
 
 
 def train_model(
@@ -24,11 +29,16 @@ def train_model(
         y_val (pd.Series): Validation target (optional)
         target (str): 'today' or 'next_day' - determines which close price to predict
     """
-    print(f"\nTraining {model_type} model for {target}'s close")
-
-    # Get ticker from data columns
-    ticker_level = 1  # Index of ticker in MultiIndex
+    ticker_level = 1
     current_ticker = train_ready_data.columns[0][ticker_level]
+
+    model_path = _MODELS_DIR / f"{current_ticker}_{date.today()}_{model_type}_{target}.pkl"
+    if model_path.exists():
+        model, scalers = joblib.load(model_path)
+        print(f"Loaded cached model: {model_path.name}")
+        return model, scalers
+
+    print(f"\nTraining {model_type} model for {target}'s close")
     print(f"Training model for ticker: {current_ticker}")
 
     # Get features with target parameter
@@ -126,7 +136,11 @@ def train_model(
         print("\nLowest importance features:")
         print(importance.tail())
 
-    return model, (X_scaler, y_scaler)
+    scalers = (X_scaler, y_scaler)
+    _MODELS_DIR.mkdir(exist_ok=True)
+    joblib.dump((model, scalers), model_path)
+    print(f"Saved model: {model_path.name}")
+    return model, scalers
 
 
 def feature_importance(model, X):
