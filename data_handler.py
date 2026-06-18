@@ -217,29 +217,32 @@ def is_known_ticker(ticker):
 
 def custom_read_csv(file_path):
     """
-    Read and parse the custom CSV file format with Type/Ticker headers.
+    Read a cached CSV written by ``df.to_csv`` from a frame with MultiIndex
+    (Type, Ticker) columns and a ``Date`` index.
+
+    On disk that looks like::
+
+        Price,Close,High,Low,Open,Volume   <- row 0: Type
+        Ticker,AAPL,AAPL,AAPL,AAPL,AAPL     <- row 1: Ticker
+        Date,,,,,                           <- row 2: leftover index-name row
+        2008-01-02,5.83,...                 <- data
+
+    So we read the two header rows as a MultiIndex, take column 0 as the
+    index, drop the stray ``Date`` index-name row, and coerce the index to
+    datetime.
     """
-    # Read the entire file
-    df = pd.read_csv(file_path)
-    
-    # Extract the column types and ticker info
-    types = df.iloc[0]  # First row contains Types
-    tickers = df.iloc[1]  # Second row contains Tickers
-    
-    # Remove the Type and Ticker rows and reset the index
-    df = df.iloc[2:].reset_index(drop=True)
-    
-    # Convert Date column to datetime and set as index
-    df['Date'] = pd.to_datetime(df['Date'])
-    df.set_index('Date', inplace=True)
-    
-    # Create MultiIndex columns
-    columns = pd.MultiIndex.from_arrays(
-        [types[1:].values, tickers[1:].values],
-        names=['Type', 'Ticker']
-    )
-    df.columns = columns
-    
+    df = pd.read_csv(file_path, header=[0, 1], index_col=0)
+    df.columns.names = ['Type', 'Ticker']
+
+    # Row 2 ("Date,,,,,") survives as an index label of "Date"; drop it.
+    df = df[df.index.astype(str) != 'Date']
+
+    df.index = pd.to_datetime(df.index)
+    df.index.name = 'Date'
+
+    # Numeric columns come back as object after the header gymnastics.
+    df = df.apply(pd.to_numeric, errors='coerce')
+
     return df
 
 def _normalize_columns(df):
