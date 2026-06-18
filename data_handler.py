@@ -230,18 +230,36 @@ def custom_read_csv(file_path):
     So we read the two header rows as a MultiIndex, take column 0 as the
     index, drop the stray ``Date`` index-name row, and coerce the index to
     datetime.
+
+    A truncated or otherwise corrupt cache file (e.g. a crash mid-write)
+    must not silently poison predictions: any parse failure, an unparseable
+    index, or an all-NaN value section is treated as corruption and returns
+    an empty DataFrame so the caller's ``df.empty`` branch removes the file
+    and re-fetches.
     """
-    df = pd.read_csv(file_path, header=[0, 1], index_col=0)
+    try:
+        df = pd.read_csv(file_path, header=[0, 1], index_col=0)
+    except (pd.errors.EmptyDataError, pd.errors.ParserError):
+        return pd.DataFrame()
+
     df.columns.names = ['Type', 'Ticker']
 
     # Row 2 ("Date,,,,,") survives as an index label of "Date"; drop it.
     df = df[df.index.astype(str) != 'Date']
 
-    df.index = pd.to_datetime(df.index)
+    # Coerce index to dates; an unparseable row becomes NaT and is dropped
+    # rather than raising into the Streamlit render loop.
+    df.index = pd.to_datetime(df.index, errors='coerce')
+    df = df[df.index.notna()]
     df.index.name = 'Date'
 
     # Numeric columns come back as object after the header gymnastics.
     df = df.apply(pd.to_numeric, errors='coerce')
+
+    # An all-NaN value section means the file was truncated or garbled;
+    # treat it as corrupt so the caller removes and re-fetches it.
+    if not df.empty and df.isnull().all(axis=None):
+        return pd.DataFrame()
 
     return df
 
