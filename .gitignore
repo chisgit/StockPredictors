@@ -36,3 +36,10 @@ models/
 
 # Known tickers list (regenerated at runtime)
 known_tickers.json
+
+# Agent / tooling scratch output (regenerated, not source)
+graphify-out/
+.graphifyignore
+.playwright-mcp/
+.gemini/
+.kiro/
