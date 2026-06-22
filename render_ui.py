@@ -205,6 +205,36 @@ def update_selected_tickers(change):
     print(f"[AFTER MULTISELECT] Multiselect value: {st.session_state.selected_tickers}")
 
 
+def app_scrollbar_css():
+    return """
+    <style>
+      html {
+        scrollbar-width: thin;
+        scrollbar-color: #475569 #0f172a;
+      }
+
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #475569;
+        border: 2px solid #0f172a;
+        border-radius: 999px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+    </style>
+    """
+
+
 def render_ui():
     trace_event(
         "render_ui.enter",
@@ -213,6 +243,7 @@ def render_ui():
         new_ticker=st.session_state.get("new_ticker"),
         run_prediction=st.session_state.get("run_prediction"),
     )
+    st.markdown(app_scrollbar_css(), unsafe_allow_html=True)
     st.title("Stock Price Predictor")
 
     # Initialize default tickers if not already in session state
@@ -258,14 +289,14 @@ def render_ui():
         st.warning(f"Maximum {UI_RULES['max_tickers']} tickers can be selected")
 
     tickers = st.multiselect(
-        "Choose multiple stocks to predict...",
+        "Choose multiple stocks:",
         valid_tickers,
         default=selected_tickers,
         key=widget_key,
         on_change=update_selected_tickers,
         args=[widget_key],
         max_selections=UI_RULES["max_tickers"],
-        placeholder="Choose from the list or search below (e.g. TSLA, AAPL, GOOGL...)",
+        placeholder="Choose multiple stocks... (e.g. TSLA, AAPL, GOOGL...)",
     )
 
     # Update selected tickers based on multiselect
