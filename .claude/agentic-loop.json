@@ -1,0 +1,26 @@
+{
+  "name": "stockpredictors-prod-ticker-loop",
+  "version": "1.0",
+  "goal": "Keep prod (stockpredictors.onrender.com) able to predict any selected ticker. Each iteration: find the live failure, fix it, ship it, verify it. Stop only when the ticker works or genuinely stuck.",
+  "skill": "dev-workflow",
+  "mandate": "full-auto: branch+worktree -> fix -> local-gate -> PR -> self-review -> merge -> deploy -> browser-verify -> loop. Do not pause for merge/deploy approval.",
+  "refs": {
+    "render_cli": "/mnt/c/Users/User/.local/bin/render-cli/cli_v2.20.0.exe",
+    "service_id": "srv-csvanmqj1k6c73c3dnt0",
+    "prod_url": "https://stockpredictors.onrender.com",
+    "test_python": "/mnt/c/Users/User/StockPredictors/venv/Scripts/python.exe",
+    "repo": "/mnt/c/Users/User/StockPredictors"
+  },
+  "loop": [
+    {"step": "observe", "do": "deploys list (confirm live commit; prod is MANUAL-deploy and lags main) + logs --limit 200; grep pipeline.ticker_exception / error_type for the real failure. Reproduce in browser if no log error."},
+    {"step": "diagnose", "do": "Map error to code via graphify-out + traceback. Rate-limit markers (Try after a while / YFR / Failed download) = account/IP throttle: clear /opt/render/.cache/py-yfinance and retest BEFORE assuming a code bug."},
+    {"step": "fix", "do": "git worktree add sibling branch off main; minimal targeted fix; add/extend a regression test."},
+    {"step": "gate", "do": "Windows venv python -m pytest -q in the worktree; must be green (baseline 116)."},
+    {"step": "ship", "do": "gh pr create -> self-review comment w/ root cause + evidence -> gh pr merge --merge --delete-branch -> remove worktree, prune branch, sync main."},
+    {"step": "deploy", "do": "deploys create --confirm; background-poll deploys list until status=live (~3-5min, no foreground sleep)."},
+    {"step": "verify", "do": "Browser: open prod, select the failing ticker, Predict, wait (model retrains, slow), confirm cards render + 0 skipped. Re-pull logs to confirm no exception."}
+  ],
+  "done_when": "Target ticker(s) render predictions on prod with no skipped/KeyError in logs.",
+  "escalate_when": "Same fix fails twice, deploy fails to build, rate-limit persists after cache clear, or a change would touch access-control / prod data / secrets. Surface to user with evidence; do not retry blindly.",
+  "guardrails": ["never force-push main", "never auto-delete prod data", "don't commit *_data.csv / models/ / known_tickers.json", "one logical change per PR"]
+}
