@@ -35,5 +35,6 @@ def test_provider_down_ignores_plain_invalid_ticker_error(monkeypatch):
 def test_provider_down_message_text_is_stable():
     assert (
         data_handler.YFINANCE_PROVIDER_DOWN_MESSAGE
-        == "Data Provider yfinance is currently down. Please try again later."
+        == "Market data is temporarily unavailable. Please try again later."
     )
+    assert "yfinance" not in data_handler.YFINANCE_PROVIDER_DOWN_MESSAGE.lower()

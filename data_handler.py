@@ -29,7 +29,8 @@ _YF_RETRY_ERROR_MARKERS = (
     "rate-limit",
     "too many requests",
 )
-YFINANCE_PROVIDER_DOWN_MESSAGE = "Data Provider yfinance is currently down. Please try again later."
+MARKET_DATA_UNAVAILABLE_MESSAGE = "Market data is temporarily unavailable. Please try again later."
+YFINANCE_PROVIDER_DOWN_MESSAGE = MARKET_DATA_UNAVAILABLE_MESSAGE
 
 
 def _default_yfinance_cache_dir():

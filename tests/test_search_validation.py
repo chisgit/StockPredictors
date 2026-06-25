@@ -61,8 +61,9 @@ def test_validate_ticker_reports_provider_down_from_yfinance_rate_limit_exceptio
 def test_provider_down_message_text_is_stable():
     assert (
         render_helpers.YFINANCE_PROVIDER_DOWN_MESSAGE
-        == "Data Provider yfinance is currently down. Please try again later."
+        == "Market data is temporarily unavailable. Please try again later."
     )
+    assert "yfinance" not in render_helpers.YFINANCE_PROVIDER_DOWN_MESSAGE.lower()
 
 
 def test_search_skips_yfinance_validation_when_ticker_already_selected(monkeypatch):
@@ -80,3 +81,22 @@ def test_search_skips_yfinance_validation_when_ticker_already_selected(monkeypat
     assert st.session_state.selected_tickers == ["TSLA"]
     assert st.session_state.tickers == ["TSLA", "AAPL"]
     assert st.session_state.last_processed_ticker_search == "TSLA"
+
+
+def test_search_exception_uses_generic_customer_message(monkeypatch):
+    messages = []
+
+    def fail_validation(*args, **kwargs):
+        raise RuntimeError("secret upstream details")
+
+    st.session_state.clear()
+    st.session_state.new_ticker = ""
+    st.session_state.selected_tickers = []
+    st.session_state.tickers = ["TSLA", "AAPL"]
+
+    monkeypatch.setattr(render_helpers, "validate_ticker_with_yfinance", fail_validation)
+    monkeypatch.setattr(render_helpers.st, "error", messages.append)
+
+    assert render_helpers.search_and_add_ticker("ibm") is False
+    assert messages == [render_helpers.YFINANCE_PROVIDER_DOWN_MESSAGE]
+    assert "secret upstream details" not in messages[0]

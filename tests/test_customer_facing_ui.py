@@ -12,6 +12,13 @@ def test_cache_debug_controls_are_not_customer_facing():
     assert "Clear yfinance cache now" not in source
 
 
+def test_customer_errors_do_not_render_raw_exceptions():
+    for path in ("render_helpers.py", "render_ui.py"):
+        source = Path(path).read_text(encoding="utf-8")
+
+        assert "st.error(f" not in source
+
+
 def test_app_scrollbar_css_is_well_formed_dark_styling():
     css = app_scrollbar_css()
 

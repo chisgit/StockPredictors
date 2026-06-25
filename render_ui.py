@@ -82,7 +82,13 @@ def display_results(predictions, skipped_tickers=None):
                 display_market_status(last_available_date)
 
         except Exception as e:
-            st.error(f"Error in the downloading of current data for {ticker}: {str(e)}")
+            trace_event(
+                "display_results.current_data_exception",
+                ticker=ticker,
+                error_type=type(e).__name__,
+                error=str(e),
+            )
+            st.error(YFINANCE_PROVIDER_DOWN_MESSAGE)
             continue
 
     # Process each ticker once for today's close
@@ -132,7 +138,13 @@ def display_results(predictions, skipped_tickers=None):
                 st.markdown(grid_html, unsafe_allow_html=True)
 
         except Exception as e:
-            st.error(f"Error processing {ticker}: {str(e)}")
+            trace_event(
+                "display_results.ticker_render_exception",
+                ticker=ticker,
+                error_type=type(e).__name__,
+                error=str(e),
+            )
+            st.error(YFINANCE_PROVIDER_DOWN_MESSAGE)
             continue
 
     # Display next day predictions if available
@@ -166,10 +178,13 @@ def display_results(predictions, skipped_tickers=None):
                             display_predictions(predictions, current_close, _delta_caption(status == "MARKET_OPEN"), "dark")
 
                 except Exception as e:
-
-                    st.error(
-                        f"Error processing next day predictions for {ticker}: {str(e)}"
+                    trace_event(
+                        "display_results.next_day_exception",
+                        ticker=ticker,
+                        error_type=type(e).__name__,
+                        error=str(e),
                     )
+                    st.error(YFINANCE_PROVIDER_DOWN_MESSAGE)
                     continue
 
 

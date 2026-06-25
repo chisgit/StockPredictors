@@ -518,6 +518,6 @@ def search_and_add_ticker(new_ticker):
             return True
         except Exception as e:
             trace_event("search.exception", new_ticker=new_ticker, error=str(e))
-            st.error(f"Error: {e}")
+            st.error(YFINANCE_PROVIDER_DOWN_MESSAGE)
             return False
     return False
